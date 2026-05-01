@@ -192,20 +192,68 @@ button:active { transform: translateY(1px); box-shadow: 0 3px 8px rgba(12, 24, 3
   color: #21313d;
   padding: 0.66rem 0.8rem;
 }
-#rulesTooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 330px;
-  display: none;
-  background: rgba(17, 31, 43, 0.96);
-  color: #f2f7fb;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 14px;
-  padding: 12px;
-  font-size: 0.78rem;
-  line-height: 1.55;
-  box-shadow: 0 16px 30px rgba(0,0,0,0.35);
+.rules-panel {
+  width: min(1040px, 96vw);
+}
+.rules-content {
+  padding: 16px 20px 22px;
+  display: grid;
+  gap: 14px;
+}
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 12px;
+}
+.rules-card {
+  background: rgba(255,255,255,0.74);
+  border: 1px solid rgba(24, 42, 58, 0.14);
+  border-radius: 16px;
+  padding: 13px 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+}
+.rules-card h3 {
+  margin: 0 0 8px;
+  color: #17384f;
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+.rules-card p,
+.rules-card li {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #2a3945;
+}
+.rules-card p { margin: 0 0 8px; }
+.rules-card ul,
+.rules-card ol { margin: 0; padding-left: 1.15rem; }
+.rules-card li + li { margin-top: 5px; }
+.rules-callout {
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #e9f5ff, #d8ebf8);
+  border: 1px solid rgba(23, 105, 170, 0.18);
+  color: #17384f;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.rules-formula {
+  display: inline-block;
+  margin: 4px 0;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(23, 105, 170, 0.08);
+  font-weight: 900;
+  color: #0d3f72;
+}
+.rules-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 20px 18px;
+}
+@media (max-width: 820px) {
+  .rules-grid { grid-template-columns: 1fr; }
+  .rules-panel { width: 96vw; }
 }
 
 #arrivalCountdown {
@@ -1433,21 +1481,128 @@ button[onclick="openWorkerMenu()"] { min-width: 154px; }
     </section>
 
     <div class="rules-wrap">
-      <button id="rulesBtn">📘 Rules</button>
-      <div id="rulesTooltip">
-        📦 Demand rate is the customer order rate. Takt is the allowed seconds per unit.<br>
-        👷 Assign workers to stations.<br>
-        ⚙️ Upgrade to increase capacity.<br>
-        🕐 Match actual output pace to takt.<br>
-        📊 Watch WIP, in-transit buffers, and lead time.<br>
-        🚦 A full downstream transit buffer blocks upstream flow.<br>
-        🎲 Random events only activate on max Difficulty.<br>
-        🚫 Overstock = penalty!<br>
-        💰 Stay out of debt.<br>
-        🎯 Hold stable takt alignment for 60s to win.
-      </div>
+      <button id="rulesBtn" onclick="openRulesModal()">📘 Rules</button>
     </div>
   </header>
+
+  <div id="rulesModal" class="upgrade-modal" aria-hidden="true">
+    <div class="upgrade-panel rules-panel" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+      <div class="upgrade-head">
+        <div>
+          <h2 id="rulesTitle" class="upgrade-title">TaktMaster Rules & Teaching Guide</h2>
+          <div class="upgrade-subtitle">Use this simulator to learn takt time, flow, WIP control, bottlenecks, and labor flexibility.</div>
+        </div>
+        <button type="button" class="upgrade-close" onclick="closeRulesModal()" aria-label="Close rules">✕</button>
+      </div>
+      <div class="rules-content">
+        <div class="rules-callout">
+          <strong>Game objective:</strong> produce at the customer demand rate without overproducing, building excess WIP, wasting labor, or running out of money. The best result is not maximum output; it is stable, demand-paced flow.
+        </div>
+
+        <div class="rules-grid">
+          <section class="rules-card">
+            <h3>How to Win</h3>
+            <ul>
+              <li>Maintain actual output pace close to the customer takt requirement for <strong>60 seconds</strong>.</li>
+              <li>Stay cash-positive while doing it.</li>
+              <li>Keep producing recently; the game needs enough completed-unit data before it will count a stable win.</li>
+              <li>Floaters may move around. A station looking temporarily unbalanced will not block a win if actual output is truly meeting takt.</li>
+            </ul>
+          </section>
+
+          <section class="rules-card">
+            <h3>Important: Do Not Overproduce</h3>
+            <p>Producing much faster than takt is overproduction, one of the Lean wastes. It may look good at first, but it can hurt your final score through WIP, lead time, overproduction time, and idle-resource penalties.</p>
+          </section>
+
+          <section class="rules-card">
+            <h3>Demand, Takt, and Output Pace</h3>
+            <p><strong>Demand Rate</strong> is how many units the customer wants per minute.</p>
+            <p><strong>Takt Requirement</strong> is the allowed time per unit:</p>
+            <div class="rules-formula">Takt = Available Time ÷ Customer Demand</div>
+            <p>Example: 60 seconds ÷ 6 units = 10 seconds/unit.</p>
+            <p><strong>Actual Output Pace</strong> is what your line is really achieving based on completed units.</p>
+          </section>
+
+          <section class="rules-card">
+            <h3>Station Terms</h3>
+            <ul>
+              <li><strong>CT:</strong> station cycle time before worker capacity and improvements.</li>
+              <li><strong>Effective Pace:</strong> station seconds/unit after workers, flex availability, and upgrades.</li>
+              <li><strong>Bottleneck:</strong> the one current station that most limits flow. The red warning appears only when a station is slower than takt.</li>
+              <li><strong>Starved:</strong> station has capacity but no work waiting.</li>
+              <li><strong>Blocked:</strong> station finished work but cannot send it forward because the downstream transit buffer is full.</li>
+            </ul>
+          </section>
+
+          <section class="rules-card">
+            <h3>Workers and Flex Availability</h3>
+            <ul>
+              <li><strong>Hire</strong> adds a fixed worker at that station, up to the max worker limit.</li>
+              <li><strong>Lay Off</strong> removes a fixed worker.</li>
+              <li><strong>Flex %</strong> applies only to the <strong>last fixed worker</strong> at that station. Earlier workers stay full-time.</li>
+              <li>Example: 3 workers at Flex 50% = 2 full workers + 1 half-time worker = 2.5 effective workers.</li>
+              <li>A half-time flex worker is not penalized if that available half-time is fully used.</li>
+            </ul>
+          </section>
+
+          <section class="rules-card">
+            <h3>Manage Workers</h3>
+            <ul>
+              <li>Use <strong>Manage Workers</strong> to move a fixed worker between stations without laying off and rehiring.</li>
+              <li>Reallocation has a nominal cross-training/reassignment cost.</li>
+              <li>You can train a <strong>Floater</strong> for selected stations or all stations. This costs more but gives flexibility.</li>
+              <li>Floaters have a home station. They return home when not needed elsewhere and support the highest-need trained station when their home is idle.</li>
+            </ul>
+          </section>
+
+          <section class="rules-card">
+            <h3>Transit WIP Buffers</h3>
+            <ul>
+              <li>The boxes between stations control how much WIP is allowed in transit/downstream waiting areas.</li>
+              <li>Use <strong>+</strong> to allow more WIP. This may prevent starvation but can increase lead time.</li>
+              <li>Use <strong>−</strong> to tighten flow. This may reduce WIP but can block upstream stations.</li>
+              <li>If current WIP reaches the buffer limit, the upstream station becomes blocked until space opens.</li>
+            </ul>
+          </section>
+
+          <section class="rules-card">
+            <h3>Upgrades</h3>
+            <ul>
+              <li><strong>Add Capacity Slot:</strong> raises the station worker limit; you still need to hire or move a worker.</li>
+              <li><strong>Kaizen:</strong> reduces cycle time and is usually best for the current bottleneck.</li>
+              <li><strong>Standard Work:</strong> reduces variation at a station.</li>
+              <li><strong>5S / Layout:</strong> reduces transport time between stations.</li>
+            </ul>
+          </section>
+
+          <section class="rules-card">
+            <h3>Difficulty and Random Events</h3>
+            <ul>
+              <li><strong>Easy:</strong> lower costs and less variation.</li>
+              <li><strong>Medium:</strong> normal costs and variation.</li>
+              <li><strong>Max:</strong> random events can occur, such as machine slowdowns, transport delays, or material shortages.</li>
+              <li>The difficulty slider locks after the round starts.</li>
+            </ul>
+          </section>
+
+          <section class="rules-card">
+            <h3>Final Score</h3>
+            <ul>
+              <li><strong>Takt Alignment:</strong> how well actual output matched takt.</li>
+              <li><strong>Profit:</strong> cash discipline after labor, hiring, upgrades, penalties, and revenue.</li>
+              <li><strong>WIP Control and Lead Time:</strong> how well you avoided excess inventory and long waits.</li>
+              <li><strong>Utilization Discipline:</strong> penalizes paid available capacity sitting idle too long.</li>
+              <li><strong>Overproduction Control:</strong> penalizes running much faster than customer demand.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+      <div class="rules-footer">
+        <button type="button" class="station-btn primary" onclick="closeRulesModal()">Got it — start improving flow</button>
+      </div>
+    </div>
+  </div>
 
   <div id="arrivalCountdown">
     Next demand part: <span id="countdown">0</span>s
@@ -3762,16 +3917,39 @@ window.addEventListener('keydown', function(e) {
   }
 });
 
-const rulesBtn = document.getElementById('rulesBtn');
-const rulesTooltip = document.getElementById('rulesTooltip');
+let rulesMenuOpen = false;
 
-rulesBtn.addEventListener('mouseenter', () => {
-  rulesTooltip.style.display = 'block';
-});
+function openRulesModal() {
+  if (!rulesMenuOpen) {
+    pauseGameplayForUpgradeMenu();
+  }
+  rulesMenuOpen = true;
+  const modal = document.getElementById('rulesModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+}
 
-rulesBtn.addEventListener('mouseleave', () => {
-  rulesTooltip.style.display = 'none';
-});
+function closeRulesModal(shouldResume = true) {
+  const modal = document.getElementById('rulesModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  const wasOpen = rulesMenuOpen;
+  rulesMenuOpen = false;
+  if (shouldResume && wasOpen) {
+    resumeGameplayAfterUpgradeMenu();
+  } else {
+    resumeAfterUpgradeMenu = false;
+  }
+}
+
+const rulesModal = document.getElementById('rulesModal');
+if (rulesModal) {
+  rulesModal.addEventListener('click', (event) => {
+    if (event.target === rulesModal) closeRulesModal();
+  });
+}
 
 const upgradeModal = document.getElementById('upgradeModal');
 if (upgradeModal) {
@@ -3780,7 +3958,7 @@ if (upgradeModal) {
   });
 }
 window.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') { closeUpgradeMenu(); closeWorkerMenu(); }
+  if (event.key === 'Escape') { closeUpgradeMenu(); closeWorkerMenu(); closeRulesModal(); }
 });
 
 
