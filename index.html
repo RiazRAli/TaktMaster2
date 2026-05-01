@@ -1,0 +1,3803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaktMaster: Factory Flow Simulator</title>
+  <style>
+:root {
+  --bg: #d8e1e7;
+  --panel: rgba(255, 255, 255, 0.92);
+  --panel-strong: #ffffff;
+  --ink: #1d2730;
+  --muted: #697784;
+  --line: rgba(28, 42, 54, 0.18);
+  --blue: #1769aa;
+  --blue-dark: #0d3f72;
+  --teal: #0c8f8a;
+  --green: #16803f;
+  --yellow: #f3b800;
+  --orange: #f36c21;
+  --red: #c62828;
+  --dark: #17212b;
+  --floor: #8f9aa2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255,255,255,0.75), transparent 35%),
+    linear-gradient(180deg, #eef4f8 0%, #d3dde4 42%, #aeb9c2 100%);
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #dce4eb);
+  color: var(--ink);
+  padding: 0.58rem 0.86rem;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 5px 12px rgba(12, 24, 36, 0.18), inset 0 1px 0 rgba(255,255,255,0.9);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+button:hover { transform: translateY(-1px); filter: brightness(1.03); box-shadow: 0 8px 18px rgba(12, 24, 36, 0.22); }
+button:active { transform: translateY(1px); box-shadow: 0 3px 8px rgba(12, 24, 36, 0.2); }
+
+.top-hud {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 150px minmax(300px, 360px) minmax(620px, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+  padding: 5px 8px;
+  background: rgba(234, 241, 246, 0.92);
+  backdrop-filter: blur(9px);
+  border-bottom: 1px solid rgba(25, 43, 56, 0.2);
+  box-shadow: 0 6px 15px rgba(18, 34, 48, 0.13);
+}
+
+.brand-card, #lineBalancePanel, .hud-grid, .rules-wrap {
+  background: var(--panel);
+  border: 1px solid rgba(24, 42, 58, 0.16);
+  border-radius: 18px;
+  box-shadow: 0 8px 18px rgba(18, 35, 48, 0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.brand-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+}
+.logo-mark {
+  width: 30px;
+  height: 44px;
+  flex: 0 0 30px;
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-dark) 65%, #134e86 100%);
+  -webkit-mask: url(assets/half_shuriken_logo.png) center / contain no-repeat;
+  mask: url(assets/half_shuriken_logo_mask.png) center / contain no-repeat;
+  position: relative;
+  filter: drop-shadow(0 2px 3px rgba(13, 63, 114, 0.22));
+}
+.brand-title {
+  line-height: 1.02;
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: -0.04em;
+}
+.brand-title .blue { color: var(--blue); }
+.brand-subtitle {
+  margin-top: 2px;
+  color: #41515d;
+  font-weight: 800;
+  font-size: 0.48rem;
+  letter-spacing: 0.06em;
+}
+
+#lineBalancePanel {
+  padding: 5px 7px 4px;
+  min-width: 300px;
+}
+#lineBalancePanel h2 {
+  margin: 0 0 2px;
+  font-size: 0.66rem;
+  font-weight: 900;
+  color: #203040;
+}
+#lineBalancePanel p { display: none; }
+#lineBalanceChart {
+  width: 100%;
+  height: 74px;
+  display: block;
+  background: linear-gradient(180deg, #f8fbfd, #e6eef3);
+  border: 1px solid rgba(20, 40, 55, 0.16);
+  border-radius: 12px;
+}
+
+.hud-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(92px, 1fr));
+  gap: 0;
+  overflow: hidden;
+}
+.hud-card {
+  min-height: 43px;
+  padding: 5px 7px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.hud-card:nth-child(5n) { border-right: 1px solid var(--line); }
+.hud-card:nth-child(6n) { border-right: 0; }
+.hud-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #edf3f6;
+  color: #324757;
+  font-size: 0.88rem;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05);
+}
+.hud-label {
+  color: #43515d;
+  text-transform: uppercase;
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.hud-value {
+  margin-top: 1px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #1c2b36;
+  line-height: 1.05;
+}
+.hud-sub {
+  margin-top: 1px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+#money { color: var(--green); }
+#taktTime { color: var(--yellow); }
+#actualOutputPace { color: var(--red); }
+#bottleneckStatus { color: var(--red); }
+
+.rules-wrap {
+  position: relative;
+  padding: 5px;
+  display: flex;
+  align-items: flex-start;
+}
+#rulesBtn {
+  white-space: nowrap;
+  background: linear-gradient(180deg, #ffffff, #e4ebf1);
+  color: #21313d;
+  padding: 0.66rem 0.8rem;
+}
+#rulesTooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 330px;
+  display: none;
+  background: rgba(17, 31, 43, 0.96);
+  color: #f2f7fb;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  box-shadow: 0 16px 30px rgba(0,0,0,0.35);
+}
+
+#arrivalCountdown {
+  position: fixed;
+  right: 10px;
+  top: 104px;
+  z-index: 40;
+  background: rgba(22, 33, 43, 0.92);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-weight: 900;
+  box-shadow: 0 8px 14px rgba(0,0,0,0.22);
+  min-width: 205px;
+  text-align: right;
+  white-space: nowrap;
+}
+#countdown {
+  color: #ffcf33;
+  animation: flash 0.8s infinite alternate;
+  display: inline-block;
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#penaltyNotice {
+  position: fixed;
+  top: 112px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 120;
+  background: rgba(198, 40, 40, 0.96);
+  color: white;
+  font-weight: 800;
+  font-size: 0.74rem;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(198,40,40,0.35);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+#eventNotice {
+  position: fixed;
+  top: 154px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 119;
+  min-width: min(520px, 92vw);
+  max-width: 720px;
+  background: rgba(19, 72, 111, 0.96);
+  color: white;
+  font-weight: 850;
+  font-size: 0.78rem;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  box-shadow: 0 14px 30px rgba(19,72,111,0.35);
+  line-height: 1.45;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.26);
+}
+#eventNotice.warning {
+  background: rgba(215, 104, 21, 0.97);
+  box-shadow: 0 14px 30px rgba(215,104,21,0.34);
+}
+#eventNotice.good {
+  background: rgba(22, 128, 63, 0.97);
+  box-shadow: 0 14px 30px rgba(22,128,63,0.34);
+}
+.hud-card.event-active {
+  background: #fff3e4;
+  border-color: rgba(215, 104, 21, 0.34);
+  box-shadow: inset 4px 0 0 #f36c21, 0 6px 12px rgba(18,35,48,0.08);
+}
+
+#gameStage {
+  position: relative;
+  min-height: calc(100vh - 150px);
+  padding: 6px 14px 96px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(17, 27, 36, 0.78) 0, rgba(17, 27, 36, 0.48) 130px, transparent 131px),
+    repeating-linear-gradient(90deg, rgba(255, 200, 0, 0.18) 0 2px, transparent 2px 128px),
+    linear-gradient(115deg, rgba(255,255,255,0.12) 0 12%, transparent 12% 20%, rgba(255,255,255,0.08) 20% 33%, transparent 33%),
+    radial-gradient(circle at 50% 10%, rgba(255,255,255,0.5), transparent 34%),
+    #9aa5ad;
+}
+#gameStage::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 185px;
+  background:
+    radial-gradient(ellipse at 20% 18%, rgba(255,255,255,0.75) 0 2%, transparent 8%),
+    radial-gradient(ellipse at 48% 14%, rgba(255,255,255,0.68) 0 2%, transparent 8%),
+    radial-gradient(ellipse at 76% 18%, rgba(255,255,255,0.75) 0 2%, transparent 8%),
+    linear-gradient(180deg, #2d3b45, #1f2c35);
+  clip-path: polygon(0 0, 100% 0, 100% 58%, 0 86%);
+  opacity: 0.95;
+}
+#gameStage::after {
+  content: "";
+  position: absolute;
+  inset: 160px 0 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.18) 0 2px, transparent 2px 70px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 130px),
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.12));
+  transform: perspective(600px) rotateX(58deg) scaleY(2.2);
+  transform-origin: top;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.factory-props {
+  position: absolute;
+  inset: 38px 18px auto;
+  height: 110px;
+  pointer-events: none;
+  z-index: 1;
+}
+.factory-props::before,
+.factory-props::after {
+  content: "";
+  position: absolute;
+  width: 210px;
+  height: 72px;
+  bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background:
+    linear-gradient(90deg, transparent 0 14px, rgba(255,193,7,0.9) 14px 22px, transparent 22px 66px, rgba(255,193,7,0.9) 66px 74px, transparent 74px),
+    repeating-linear-gradient(0deg, rgba(22,60,102,0.9) 0 13px, rgba(255,255,255,0.14) 13px 15px, rgba(22,60,102,0.9) 15px 28px),
+    #244a6a;
+  box-shadow: 0 12px 18px rgba(0,0,0,0.25);
+  opacity: 0.85;
+}
+.factory-props::before { left: 0; }
+.factory-props::after { right: 0; }
+
+#factory {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  justify-content: flex-start;
+  gap: 118px;
+  padding: 56px 34px 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-behavior: smooth;
+}
+#factory::-webkit-scrollbar { height: 12px; }
+#factory::-webkit-scrollbar-track { background: rgba(255,255,255,0.32); border-radius: 999px; }
+#factory::-webkit-scrollbar-thumb { background: rgba(27, 60, 87, 0.55); border-radius: 999px; }
+
+.station-wrapper {
+  position: relative;
+  flex: 0 0 252px;
+  min-height: 430px;
+  perspective: 900px;
+}
+.station-wrapper:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 136px;
+  left: calc(100% - 2px);
+  width: 124px;
+  height: 40px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.62) 0 20px, transparent 20px 38px),
+    linear-gradient(180deg, rgba(35,47,58,0.25), rgba(18,28,38,0.08));
+  border-top: 4px dashed rgba(255,255,255,0.75);
+  border-bottom: 4px dashed rgba(255,255,255,0.75);
+  transform: skewX(-14deg);
+  filter: drop-shadow(0 5px 7px rgba(0,0,0,0.18));
+  z-index: 1;
+}
+.station-wrapper:not(:last-child)::after {
+  display: none;
+}
+.travel-label {
+  position: absolute;
+  top: 166px;
+  left: calc(100% + 18px);
+  min-width: 72px;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: rgba(22, 36, 48, 0.88);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 0 5px 12px rgba(0,0,0,0.22);
+  z-index: 6;
+}
+
+.kanban-card {
+  position: absolute;
+  top: 202px;
+  left: calc(100% + 7px);
+  width: 92px;
+  padding: 7px 7px 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d3040;
+  border: 1px solid rgba(24, 42, 58, 0.18);
+  box-shadow: 0 9px 16px rgba(0,0,0,0.22);
+  z-index: 8;
+  text-align: center;
+}
+.kanban-card.full {
+  background: #fff0ec;
+  border-color: rgba(198, 40, 40, 0.42);
+  box-shadow: 0 9px 16px rgba(0,0,0,0.22), 0 0 14px rgba(198,40,40,0.28);
+}
+.kanban-help {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcebf4;
+  color: #0f5b89;
+  border: 1px solid rgba(15, 91, 137, 0.18);
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: help;
+}
+.kanban-meter button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.15);
+}
+.kanban-title {
+  color: #50606c;
+  font-size: 0.56rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.kanban-route {
+  margin-top: 2px;
+  color: #203040;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.kanban-meter {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: 22px 1fr 22px;
+  align-items: center;
+  gap: 4px;
+}
+.kanban-meter button {
+  min-width: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 7px;
+  font-size: 0.74rem;
+  line-height: 1;
+  background: linear-gradient(180deg, #ffffff, #d7e2ea);
+  color: #1c5b87;
+}
+.kanban-meter span {
+  border-radius: 8px;
+  padding: 4px 2px;
+  background: #e8f2f7;
+  color: #0f5b89;
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+.kanban-card.full .kanban-meter span {
+  background: #ffe2dc;
+  color: var(--red);
+}
+.flow-state {
+  margin: 5px 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  line-height: 1;
+  font-weight: 900;
+  text-align: center;
+  border: 1px solid rgba(30, 50, 66, 0.12);
+}
+.flow-state.running { background: #eaf8ef; color: var(--green); }
+.flow-state.starved { background: #fff5da; color: #a56a00; }
+.flow-state.blocked { background: #ffe9e5; color: var(--red); animation: blockedPulse 0.9s infinite alternate; }
+.flow-state.idle { background: #edf2f5; color: #50606c; }
+.flow-state.no-workers { background: #f2e9ff; color: #6941a4; }
+@keyframes blockedPulse { from { filter: brightness(1); } to { filter: brightness(1.08); } }
+.station.blocked .workcell {
+  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.22), 0 0 22px rgba(198,40,40,0.28);
+}
+
+.station {
+  position: relative;
+  min-height: 424px;
+  padding: 0;
+  color: var(--ink);
+}
+
+.workcell {
+  position: relative;
+  height: 205px;
+  border-radius: 18px 18px 12px 12px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.2), transparent 18% 82%, rgba(0,0,0,0.12)),
+    linear-gradient(180deg, #d9e1e7 0%, #a9b7c2 64%, #7d8993 100%);
+  border: 4px solid rgba(37, 54, 68, 0.45);
+  box-shadow:
+    0 20px 28px rgba(0,0,0,0.32),
+    inset 0 0 0 3px rgba(255,255,255,0.32),
+    inset 0 -18px 28px rgba(35, 47, 58, 0.18);
+  overflow: visible;
+  transform: rotateX(1deg);
+}
+.workcell::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 3px solid rgba(255, 193, 7, 0.85);
+  border-radius: 12px;
+  pointer-events: none;
+}
+.workcell::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 11px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.18);
+  filter: blur(8px);
+}
+.station.bottleneck .workcell {
+  border-color: rgba(210, 45, 33, 0.85);
+  box-shadow:
+    0 20px 28px rgba(0,0,0,0.32),
+    0 0 0 5px rgba(255, 76, 45, 0.22),
+    0 0 28px rgba(255, 65, 35, 0.72),
+    inset 0 0 0 3px rgba(255,255,255,0.32),
+    inset 0 -18px 28px rgba(35, 47, 58, 0.18);
+}
+.station.bottleneck .workcell::before { border-color: rgba(255, 70, 50, 0.95); box-shadow: 0 0 22px rgba(255, 70, 50, 0.75); }
+
+.station-sign {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: -20px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, var(--blue), var(--blue-dark));
+  box-shadow: 0 8px 14px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.station-number {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.88);
+  color: var(--blue-dark);
+}
+.station.assembly .station-sign { background: linear-gradient(180deg, #b91f1f, #791717); }
+.station.inspection .station-sign { background: linear-gradient(180deg, #0f8b85, #07534f); }
+.station.packing .station-sign { background: linear-gradient(180deg, #196bb1, #0b4274); }
+.station.bottleneck .station-sign { background: linear-gradient(180deg, #d63727, #8e1c16); }
+
+.bottleneck-badge {
+  position: absolute;
+  top: -62px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  white-space: nowrap;
+  padding: 8px 13px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #d73724, #8f1b14);
+  color: white;
+  font-weight: 900;
+  font-size: 0.74rem;
+  box-shadow: 0 0 18px rgba(240, 74, 35, 0.75), 0 8px 16px rgba(0,0,0,0.32);
+}
+.bottleneck-badge::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  transform: translateX(-50%);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 12px solid #8f1b14;
+}
+
+.machine-scene {
+  position: absolute;
+  inset: 14px 6px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.station-asset {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 16px rgba(0,0,0,0.32)) saturate(1.05);
+  pointer-events: none;
+  user-select: none;
+}
+.station-asset.still {
+  transform: scale(0.90);
+  transform-origin: center center;
+}
+.station-asset.animated {
+  filter: drop-shadow(0 12px 16px rgba(0,0,0,0.34)) saturate(1.08);
+}
+.machine-base {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 16px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #eef4f8, #aebbc5);
+  border: 2px solid rgba(54,70,82,0.35);
+  box-shadow: 0 10px 12px rgba(0,0,0,0.2);
+}
+.machine-screen {
+  position: absolute;
+  right: 16px;
+  top: 40px;
+  width: 38px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #122534, #07131d);
+  border: 3px solid #80909c;
+  box-shadow: 0 6px 9px rgba(0,0,0,0.28);
+}
+.machine-screen::after {
+  content: "OK";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #3bff83;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+.machine-cut,
+.machine-inspect,
+.machine-pack {
+  position: absolute;
+  left: 26px;
+  bottom: 54px;
+  width: 118px;
+  height: 58px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1f8bd6, #0d4d83);
+  box-shadow: inset 0 8px 0 rgba(255,255,255,0.22), 0 14px 14px rgba(0,0,0,0.25);
+}
+.machine-cut::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -20px;
+  height: 24px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(90deg, #202b33 0 8px, #c7d0d7 8px 13px);
+  border: 2px solid rgba(255,255,255,0.35);
+}
+.machine-cut::after {
+  content: "";
+  position: absolute;
+  left: 30px;
+  top: -20px;
+  width: 62px;
+  height: 26px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, #b8d7ef, #5f9fcc);
+  border: 2px solid rgba(255,255,255,0.45);
+}
+.robot-arm {
+  position: absolute;
+  left: 58px;
+  top: 56px;
+  width: 34px;
+  height: 92px;
+  transform-origin: bottom center;
+  transform: rotate(28deg);
+  background: linear-gradient(90deg, #e56b1f, #ffac4a 45%, #b94813);
+  border-radius: 17px;
+  box-shadow: 0 8px 10px rgba(0,0,0,0.25);
+}
+.robot-arm::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 8px;
+  width: 72px;
+  height: 24px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffb14a, #d85f1f);
+  transform: rotate(-48deg);
+  box-shadow: 0 8px 9px rgba(0,0,0,0.22);
+}
+.robot-arm::after {
+  content: "";
+  position: absolute;
+  left: -28px;
+  top: 44px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #2c3842;
+  border: 5px solid #ff9a31;
+}
+.machine-inspect {
+  background: linear-gradient(180deg, #dfe9ef, #95a8b5);
+}
+.machine-inspect::before {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: -35px;
+  width: 68px;
+  height: 40px;
+  border-radius: 9px;
+  background: #10212c;
+  border: 5px solid #738391;
+  box-shadow: 0 8px 10px rgba(0,0,0,0.22);
+}
+.machine-inspect::after {
+  content: "OK";
+  position: absolute;
+  left: 24px;
+  top: -35px;
+  width: 68px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: #21df6b;
+  font-weight: 900;
+}
+.machine-pack {
+  background: linear-gradient(180deg, #e2e9ed, #8c99a4);
+}
+.machine-pack::before {
+  content: "";
+  position: absolute;
+  left: 80px;
+  top: -20px;
+  width: 34px;
+  height: 80px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #e5e9ec, #ffffff 45%, #9ba8b3);
+  transform: rotate(35deg);
+  box-shadow: 0 7px 10px rgba(0,0,0,0.24);
+}
+.machine-pack::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  bottom: -18px;
+  width: 84px;
+  height: 34px;
+  background: repeating-linear-gradient(90deg, #3d4850 0 8px, #c4ccd2 8px 14px);
+  border-radius: 5px;
+}
+.status-light {
+  position: absolute;
+  right: 32px;
+  top: 82px;
+  width: 10px;
+  height: 28px;
+  border-radius: 999px;
+  background: #1ce56c;
+  box-shadow: 0 0 12px #1ce56c;
+}
+.station.bottleneck .status-light { background: #ff4128; box-shadow: 0 0 15px #ff4128; }
+.station.active .machine-scene { animation: machineHum 0.55s infinite alternate ease-in-out; }
+@keyframes machineHum { from { transform: translateY(0) scale(0.82); } to { transform: translateY(-1.5px) scale(0.82); } }
+
+.station-card {
+  position: relative;
+  z-index: 7;
+  margin: -10px 6px 0;
+  padding: 9px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid rgba(26, 43, 58, 0.18);
+  box-shadow: 0 12px 18px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.92);
+}
+.station-card.bottleneck-card { border-color: rgba(201, 39, 39, 0.45); box-shadow: 0 12px 18px rgba(0,0,0,0.24), 0 0 16px rgba(201,39,39,0.35); }
+.station-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+.stat-pill {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 7px;
+  border-radius: 9px;
+  background: #edf2f5;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.stat-pill span:first-child { color: #50606c; }
+.stat-pill span:last-child { color: var(--blue); }
+.station.assembly .stat-pill span:last-child { color: var(--red); }
+.station.inspection .stat-pill span:last-child { color: var(--teal); }
+
+.capacity-status {
+  margin: 5px 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  font-weight: 900;
+  background: #edf2f5;
+  border: 1px solid rgba(30, 50, 66, 0.12);
+}
+.capacity-status.good { color: var(--green); background: #eaf8ef; }
+.capacity-status.warning { color: #a56a00; background: #fff5da; }
+.capacity-status.bad { color: var(--red); background: #ffe9e5; }
+
+.worker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0;
+  color: #334653;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.worker-icons { font-size: 0.92rem; letter-spacing: -0.12rem; }
+
+.visual-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  margin: 4px 0;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: #eef3f6;
+  border: 1px solid rgba(31, 50, 65, 0.1);
+}
+.visual-label {
+  min-width: 34px;
+  color: #4c5d68;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+.part-icons { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; min-height: 20px; }
+.part-icon {
+  width: 16px;
+  height: 14px;
+  display: inline-block;
+  border-radius: 3px 3px 4px 4px;
+  background: linear-gradient(180deg, #d99b52, #b7752e);
+  border: 1px solid rgba(90, 45, 10, 0.35);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.22), 0 2px 3px rgba(0,0,0,0.18);
+  font-size: 0;
+  position: relative;
+}
+.part-icon::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(92, 50, 18, 0.35);
+}
+.part-icon.processing { animation: processPulse 0.75s infinite alternate; }
+@keyframes processPulse { from { transform: translateY(0) scale(1); filter: brightness(1); } to { transform: translateY(-2px) scale(1.05); filter: brightness(1.12); } }
+.overflow-count { color: #a56a00; font-weight: 900; font-size: 0.75rem; }
+
+.station-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 6px;
+}
+.station-btn {
+  padding: 0.38rem 0.38rem;
+  border-radius: 9px;
+  font-size: 0.64rem;
+  background: linear-gradient(180deg, #ffffff, #dce5ec);
+}
+.station-btn.primary { background: linear-gradient(180deg, #e9f6ff, #b9d9ee); color: #0e568c; }
+.station-btn.danger { background: linear-gradient(180deg, #fff2ee, #f2c5bc); color: #8e2118; }
+.station-btn.lean { grid-column: span 2; background: linear-gradient(180deg, #effaf4, #c7ecd5); color: #126c38; }
+
+.util-gauge {
+  position: absolute;
+  right: -25px;
+  top: 308px;
+  width: 16px;
+  height: 82px;
+  border-radius: 999px;
+  padding: 3px;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(25, 43, 56, 0.2);
+  box-shadow: 0 8px 14px rgba(0,0,0,0.2);
+  z-index: 6;
+}
+.util-fill {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2bd977, #0b8a3d);
+}
+.util-label {
+  position: absolute;
+  bottom: -19px;
+  right: -10px;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.45);
+}
+
+#transports {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  overflow: visible;
+}
+.transit-crate {
+  position: absolute;
+  width: 28px;
+  height: 23px;
+  border-radius: 4px 4px 6px 6px;
+  background: linear-gradient(180deg, #e7ad62, #b8732c);
+  border: 2px solid rgba(86, 44, 13, 0.35);
+  box-shadow: 0 10px 14px rgba(0,0,0,0.26), inset 0 4px 0 rgba(255,255,255,0.24);
+  z-index: 20;
+  will-change: transform;
+}
+.transit-crate::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: rgba(92,48,15,0.35);
+}
+.transit-crate::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: -8px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.28);
+  filter: blur(2px);
+}
+
+#controls {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: grid;
+  grid-template-columns: auto auto auto auto minmax(215px, 260px) auto auto;
+  gap: 7px;
+  align-items: center;
+  padding: 10px 12px 12px;
+  background: rgba(21, 32, 42, 0.96);
+  border-top: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 -12px 24px rgba(0,0,0,0.28);
+}
+#controls > button {
+  white-space: nowrap;
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+}
+#togglePlayBtn { background: linear-gradient(180deg, #24c86a, #0b7c3c); color: white; min-width: 116px; }
+#toggleSupplyBtn { background: linear-gradient(180deg, #e65e4d, #9d251b); color: white; min-width: 130px; }
+#speedBtn, #resetBtn { min-width: 104px; }
+#resetBtn { background: linear-gradient(180deg, #ffffff, #cfd9e1); }
+button[onclick="openUpgradeMenu()"] { min-width: 112px; }
+button[onclick="openWorkerMenu()"] { min-width: 154px; }
+.control-group {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 215px;
+  max-width: 260px;
+  padding: 7px 9px;
+  border-radius: 14px;
+  color: #e9f2f7;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.11);
+  font-weight: 800;
+  position: relative;
+  overflow: visible;
+}
+#variabilitySlider { accent-color: #20c66b; width: 100px; }
+#variabilityValue { color: #33e884; min-width: 62px; }
+#tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 10px);
+  visibility: hidden;
+  color: white;
+  background: #16212b;
+  padding: 0.48rem 0.65rem;
+  border-radius: 10px;
+  width: max-content;
+  max-width: min(270px, 82vw);
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 18px rgba(0,0,0,0.28);
+  pointer-events: none;
+  z-index: 200;
+}
+#tooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #16212b;
+}
+.tip-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #d9e5ec;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 0.74rem;
+}
+.tip-label {
+  background: #0e67a9;
+  color: white;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-weight: 900;
+}
+
+
+/* Upgrade menu */
+.upgrade-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(12, 20, 28, 0.58);
+  backdrop-filter: blur(6px);
+}
+.upgrade-panel {
+  width: min(980px, 96vw);
+  max-height: 88vh;
+  overflow: auto;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff, #e8eff5);
+  border: 1px solid rgba(24, 42, 58, 0.22);
+  box-shadow: 0 26px 60px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.95);
+  color: var(--ink);
+}
+.upgrade-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid rgba(24, 42, 58, 0.14);
+}
+.upgrade-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.upgrade-subtitle {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.upgrade-bank {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(12, 38, 28, 0.08);
+  color: #1d3040;
+  border: 1px solid rgba(18, 93, 54, 0.2);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+.upgrade-bank strong { color: #117a3b; }
+.upgrade-close {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff, #d9e3eb);
+}
+.station-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 20px 8px;
+}
+.station-tab {
+  padding: 0.72rem 0.6rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7fbfe, #dce8f0);
+  color: #21313d;
+  font-size: 0.78rem;
+}
+.station-tab.selected {
+  background: linear-gradient(180deg, #1c76b6, #0d4f86);
+  color: white;
+  box-shadow: 0 9px 18px rgba(17, 92, 151, 0.28);
+}
+.upgrade-context {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 20px 12px;
+}
+.upgrade-context .mini-stat {
+  border-radius: 14px;
+  background: rgba(255,255,255,0.74);
+  border: 1px solid rgba(24,42,58,0.12);
+  padding: 9px 10px;
+}
+.upgrade-context .mini-label {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.upgrade-context .mini-value {
+  margin-top: 2px;
+  font-weight: 900;
+  color: #1d2d38;
+}
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 20px 16px;
+}
+.upgrade-card {
+  text-align: left;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #edf4f8);
+  border: 1px solid rgba(24,42,58,0.13);
+  padding: 14px;
+  box-shadow: 0 9px 18px rgba(20,38,52,0.12), inset 0 1px 0 rgba(255,255,255,0.95);
+  min-height: 144px;
+}
+.upgrade-card:hover { transform: translateY(-2px); }
+.upgrade-card.disabled {
+  opacity: 0.55;
+  filter: grayscale(0.35);
+}
+.upgrade-card h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #203040;
+}
+.upgrade-card p {
+  margin: 0 0 9px;
+  color: #596b78;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+.upgrade-card .upgrade-effect {
+  color: #153f5e;
+  font-size: 0.78rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+.upgrade-card .upgrade-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #edf6ee;
+  color: var(--green);
+  font-weight: 900;
+  font-size: 0.8rem;
+}
+.upgrade-feedback {
+  min-height: 32px;
+  margin: 0 20px 18px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: rgba(27, 60, 87, 0.08);
+  color: #304757;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.upgrade-feedback.warning {
+  background: rgba(198, 40, 40, 0.1);
+  color: var(--red);
+}
+.upgrade-feedback.good {
+  background: rgba(22, 128, 63, 0.1);
+  color: var(--green);
+}
+.worker-panel { max-width: 980px; }
+.worker-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+.worker-status-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f6fafc;
+  padding: 9px;
+  font-weight: 800;
+  color: #203040;
+}
+.worker-status-card .small { color: var(--muted); font-size: 0.76rem; font-weight: 700; margin-top: 3px; }
+.worker-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.worker-card {
+  border: 1px solid rgba(24,42,58,0.16);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #eef5f8);
+  padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 6px 14px rgba(18,35,48,0.08);
+}
+.worker-card h3 { margin: 0 0 6px; font-size: 0.95rem; color: #203040; }
+.worker-card p { margin: 0 0 10px; color: var(--muted); font-size: 0.78rem; line-height: 1.35; }
+.worker-form-row { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.worker-form-row label { font-size: 0.78rem; color: #41515d; font-weight: 900; }
+.worker-form-row select, .floater-scope-checks label { font: inherit; font-size: 0.82rem; }
+.worker-form-row select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 8px;
+  background: white;
+  color: var(--ink);
+  font-weight: 800;
+}
+.floater-scope-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 8px;
+  margin: 8px 0 10px;
+}
+.floater-scope-checks label { display: flex; gap: 6px; align-items: center; color: #203040; font-weight: 800; }
+.worker-cost-note { margin-top: 7px; color: var(--blue-dark); font-weight: 900; font-size: 0.78rem; }
+@media (max-width: 900px) { .worker-status-grid, .worker-actions-grid { grid-template-columns: 1fr; } }
+@media (max-width: 840px) {
+  .station-tabs, .upgrade-context { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .upgrade-grid { grid-template-columns: 1fr; }
+}
+
+.win-message {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(6, 13, 18, 0.86);
+  color: var(--ink);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+.win-message > div {
+  background: rgba(255,255,255,0.96);
+  border-radius: 24px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 28px 60px rgba(0,0,0,0.35);
+  max-width: 620px;
+  border: 1px solid rgba(255,255,255,0.5);
+}
+.win-message h2 { color: var(--green); }
+.win-message button { margin-top: 1.1rem; background: linear-gradient(180deg, #24c86a, #0b7c3c); color: white; }
+
+.score-summary {
+  margin: 1rem auto 0;
+  padding: 0.9rem;
+  border-radius: 16px;
+  background: #f4f8fb;
+  border: 1px solid rgba(24, 42, 58, 0.12);
+  text-align: left;
+  max-width: 520px;
+}
+.score-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-weight: 900;
+  color: var(--ink);
+  margin-bottom: 0.6rem;
+}
+.score-total strong {
+  font-size: 1.65rem;
+  color: var(--green);
+}
+.score-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid rgba(24, 42, 58, 0.08);
+  font-size: 0.88rem;
+}
+.score-row span:last-child { font-weight: 800; }
+.economy-summary {
+  margin: 0.75rem auto 0;
+  max-width: 520px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  text-align: left;
+  color: #475766;
+}
+.economy-summary strong { color: var(--ink); }
+
+@keyframes flash { 0% { opacity: 1; } 100% { opacity: 0.45; } }
+@media (max-width: 1300px) {
+  .top-hud { grid-template-columns: 220px minmax(330px, 450px) 1fr auto; }
+  .hud-grid { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
+  .hud-card:nth-child(5n) { border-right: 1px solid var(--line); }
+  .hud-card:nth-child(4n) { border-right: 0; }
+  #factory { gap: 96px; }
+}
+@media (max-width: 980px) {
+  .top-hud { position: relative; grid-template-columns: 1fr; }
+  #arrivalCountdown { position: static; margin: 10px; }
+  .hud-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+  #controls { position: relative; grid-template-columns: 1fr 1fr; }
+  .tip-bar { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+  <header class="top-hud">
+    <section class="brand-card" aria-label="Game title">
+      <div class="logo-mark"></div>
+      <div>
+        <div class="brand-title"><span class="blue">Takt</span>Master</div>
+        <div class="brand-subtitle">FACTORY FLOW SIMULATOR</div>
+      </div>
+    </section>
+
+    <section id="lineBalancePanel">
+      <h2>Line Balance <span style="font-weight:700;color:#6b7882;">(Effective Pace vs Takt)</span></h2>
+      <p>Bars = station effective seconds/unit. Yellow line = takt requirement, the allowed seconds/unit from demand. Red = active bottleneck only when a station is slower than takt.</p>
+      <canvas id="lineBalanceChart" width="520" height="84"></canvas>
+    </section>
+
+    <section class="hud-grid" aria-label="Factory metrics">
+      <div class="hud-card"><div class="hud-icon">💵</div><div><div class="hud-label">Money</div><div class="hud-value">$<span id="money">1200</span></div></div></div>
+      <div class="hud-card"><div class="hud-icon">🕒</div><div><div class="hud-label">Time</div><div class="hud-value"><span id="timer">0</span></div></div></div>
+      <div class="hud-card"><div class="hud-icon">👥</div><div><div class="hud-label">Demand Rate</div><div class="hud-value"><span id="customerDemand">—</span></div><div class="hud-sub">units/min</div></div></div>
+      <div class="hud-card"><div class="hud-icon">⏱️</div><div><div class="hud-label">Takt Requirement</div><div class="hud-value"><span id="taktTime">—</span></div><div class="hud-sub">allowed sec/unit</div></div></div>
+      <div class="hud-card"><div class="hud-icon">📈</div><div><div class="hud-label">Actual Output Pace</div><div class="hud-value"><span id="actualOutputPace">—</span></div></div></div>
+      <div class="hud-card"><div class="hud-icon">📦</div><div><div class="hud-label">Total Produced</div><div class="hud-value"><span id="totalProduced">0</span></div><div class="hud-sub">units</div></div></div>
+      <div class="hud-card"><div class="hud-icon">🏗️</div><div><div class="hud-label">Total WIP</div><div class="hud-value"><span id="totalWip">0</span></div><div class="hud-sub">units</div></div></div>
+      <div class="hud-card"><div class="hud-icon">🚦</div><div><div class="hud-label">Flow Status</div><div class="hud-value"><span id="flowStatus">Ready</span></div></div></div>
+      <div class="hud-card" id="randomEventCard"><div class="hud-icon">🎲</div><div><div class="hud-label">Random Event</div><div class="hud-value"><span id="randomEventStatus">Off</span></div></div></div>
+      <div class="hud-card"><div class="hud-icon">⏳</div><div><div class="hud-label">Avg Lead Time</div><div class="hud-value"><span id="avgLeadTime">—</span></div></div></div>
+      <div class="hud-card"><div class="hud-icon">👷</div><div><div class="hud-label">Labor Overhead</div><div class="hud-value">$<span id="workerCost">0</span></div><div class="hud-sub">per min</div></div></div>
+      <div class="hud-card"><div class="hud-icon">🚨</div><div><div class="hud-label">Current Bottleneck</div><div class="hud-value"><span id="bottleneckStatus">—</span></div></div></div>
+    </section>
+
+    <div class="rules-wrap">
+      <button id="rulesBtn">📘 Rules</button>
+      <div id="rulesTooltip">
+        📦 Demand rate is the customer order rate. Takt is the allowed seconds per unit.<br>
+        👷 Assign workers to stations.<br>
+        ⚙️ Upgrade to increase capacity.<br>
+        🕐 Match actual output pace to takt.<br>
+        📊 Watch WIP, in-transit buffers, and lead time.<br>
+        🚦 A full downstream transit buffer blocks upstream flow.<br>
+        🎲 Random events only activate on max Difficulty.<br>
+        🚫 Overstock = penalty!<br>
+        💰 Stay out of debt.<br>
+        🎯 Hold stable takt alignment for 60s to win.
+      </div>
+    </div>
+  </header>
+
+  <div id="arrivalCountdown">
+    Next demand part: <span id="countdown">0</span>s
+  </div>
+  <div id="penaltyNotice"></div>
+  <div id="eventNotice"></div>
+
+  <main id="gameStage">
+    <div class="factory-props"></div>
+    <section id="factory"></section>
+    <div id="transports"></div>
+  </main>
+
+  <section id="controls">
+    <button id="togglePlayBtn" onclick="togglePlay()">▶️ Play</button>
+    <button id="toggleSupplyBtn" onclick="toggleSupply()">🛑 Stop Supply</button>
+    <button onclick="toggleSpeed()" id="speedBtn">⏩ Speed: 1x</button>
+    <button id="resetBtn" onclick="resetGame()">🔄 Reset</button>
+
+    <div class="control-group">
+      <label for="variabilitySlider">Difficulty</label>
+      <input id="variabilitySlider" type="range" min="0" max="2" step="0.1" value="0">
+      <span id="variabilityValue">0 / 2</span>
+      <div id="tooltip">Higher difficulty adds process variation. At maximum difficulty, random events can occur. The slider is disabled after START is pressed.</div>
+    </div>
+    <button type="button" onclick="openUpgradeMenu()">🛠️ Upgrades</button>
+    <button type="button" onclick="openWorkerMenu()">👷 Manage Workers</button>
+
+    <div class="tip-bar"><span class="tip-label">TIP</span><span>Set transit buffer limits carefully. Too high creates inventory and lead time; too low can starve the next station.</span></div>
+  </section>
+
+
+
+  <div id="upgradeModal" class="upgrade-modal" aria-hidden="true">
+    <div class="upgrade-panel" role="dialog" aria-modal="true" aria-labelledby="upgradeTitle">
+      <div class="upgrade-head">
+        <div>
+          <h2 id="upgradeTitle" class="upgrade-title">Lean Upgrade Menu</h2>
+          <div class="upgrade-subtitle">Choose one station, then apply the improvement. Only the selected station is changed.</div>
+          <div class="upgrade-bank">Available Cash: <strong>$<span id="upgradeMoney">1200</span></strong></div>
+        </div>
+        <button type="button" class="upgrade-close" onclick="closeUpgradeMenu()" aria-label="Close upgrade menu">✕</button>
+      </div>
+      <div id="upgradeStationTabs" class="station-tabs"></div>
+      <div id="upgradeContext" class="upgrade-context"></div>
+      <div id="upgradeCards" class="upgrade-grid"></div>
+      <div id="upgradeFeedback" class="upgrade-feedback">Tip: start with the current bottleneck. Once it improves, the bottleneck may move.</div>
+    </div>
+  </div>
+
+  <div id="workerModal" class="upgrade-modal" aria-hidden="true">
+    <div class="upgrade-panel worker-panel" role="dialog" aria-modal="true" aria-labelledby="workerTitle">
+      <div class="upgrade-head">
+        <div>
+          <h2 id="workerTitle" class="upgrade-title">Worker Reallocation & Cross-Training</h2>
+          <div class="upgrade-subtitle">Move existing workers instead of laying off and rehiring. Floaters have a home station, return home when not needed elsewhere, and automatically support the highest-need trained station when idle at home.</div>
+          <div class="upgrade-bank">Available Cash: <strong>$<span id="workerMoney">1200</span></strong></div>
+        </div>
+        <button type="button" class="upgrade-close" onclick="closeWorkerMenu()" aria-label="Close worker menu">✕</button>
+      </div>
+      <div id="workerStatus" class="worker-status-grid"></div>
+      <div class="worker-actions-grid">
+        <div class="worker-card">
+          <h3>Reallocate Worker</h3>
+          <p>Move one fixed worker from one station to another for a cross-training/reassignment fee.</p>
+          <div class="worker-form-row"><label>From</label><select id="moveFromStation"></select></div>
+          <div class="worker-form-row"><label>To</label><select id="moveToStation"></select></div>
+          <button type="button" class="station-btn primary" onclick="applyWorkerMove()">Move Worker</button>
+          <div class="worker-cost-note">Fee: $<span id="moveFeeLabel">0</span></div>
+        </div>
+        <div class="worker-card">
+          <h3>Create Floater</h3>
+          <p>Convert one fixed worker into a flexible floater with a home station. Floaters still cost labor, return home when not needed elsewhere, and shift support automatically when their home station is idle.</p>
+          <div class="worker-form-row"><label>Worker From</label><select id="floaterSourceStation"></select></div>
+          <div class="worker-form-row"><label>Scope</label><select id="floaterScopeMode" onchange="renderWorkerMenu()"><option value="selected">Selected stations</option><option value="all">All stations</option></select></div>
+          <div id="floaterScopeChecks" class="floater-scope-checks"></div>
+          <button type="button" class="station-btn primary" onclick="createFloaterWorker()">Train Floater</button>
+          <div class="worker-cost-note">Selected scope: $<span id="selectedFloaterFeeLabel">0</span> | All stations: $<span id="allFloaterFeeLabel">0</span></div>
+        </div>
+      </div>
+      <div id="workerFeedback" class="upgrade-feedback">Tip: use reallocation to follow the bottleneck. Use floaters when the constraint keeps moving.</div>
+    </div>
+  </div>
+
+<script>
+let money = 1200;
+let time = 0;
+let totalProduced = 0;
+let activeTransports = [];
+let completedLeadTimes = [];
+let lastProductTime = 0;
+let actualOutputPace = 0;
+let completionTimestamps = [];
+let taktTimeGoal = 0;
+let customerDemandUnits = 0;
+let playing = false;
+let timerInterval;
+let speed = 1000;
+let variability = 0;
+let nextArrival = 0;
+let outputPaceHistory = [];
+let winStartTime = null;
+let hasBeenInLoss = false;
+let negativeMoneyTime = 0;
+const maxNegativeTime = 120;
+let gameWon = false;
+let gameLost = false;
+let supplyOn = true;
+let gameSessionId = 0;
+let winTimer = 0;
+
+// Lean-correct takt setup:
+// Takt Time = Available Production Time / Customer Demand.
+// The process does not create takt time; customer demand creates takt time.
+// Each game creates a constrained demand scenario so rounds vary without becoming unrealistic.
+const AVAILABLE_PRODUCTION_TIME_SECONDS = 60;
+const MIN_CUSTOMER_DEMAND_UNITS = 4;  // 15.0s/unit: easier, but not too slow
+const MAX_CUSTOMER_DEMAND_UNITS = 7;  // 8.6s/unit: harder, but still reachable with improvements
+const TAKT_TOLERANCE_PERCENT = 0.08;
+const MIN_TAKT_TOLERANCE_SECONDS = 0.5;
+const MAX_TAKT_TOLERANCE_SECONDS = 1.0;
+const MIN_COMPLETIONS_FOR_WIN = 5;
+const WIN_STABILITY_SECONDS = 60;
+
+const BASE_TRANSPORT_TIME_SECONDS = 3;
+const MIN_TRANSPORT_TIME_SECONDS = 1;
+const MIN_STATION_CYCLE_TIME_SECONDS = 4;
+let transportTimes = [BASE_TRANSPORT_TIME_SECONDS, BASE_TRANSPORT_TIME_SECONDS, BASE_TRANSPORT_TIME_SECONDS];
+const DEFAULT_KANBAN_LIMIT = 5;
+const MIN_KANBAN_LIMIT = 1;
+const MAX_KANBAN_LIMIT = 12;
+let kanbanLimits = [DEFAULT_KANBAN_LIMIT, DEFAULT_KANBAN_LIMIT, DEFAULT_KANBAN_LIMIT];
+let selectedUpgradeStationIndex = 0;
+let upgradeMenuOpen = false;
+let resumeAfterUpgradeMenu = false;
+let workerMenuOpen = false;
+let floaterWorkers = [];
+let nextFloaterId = 1;
+const WORKER_REALLOCATION_FEE = 90;
+const FLOATER_SELECTED_STATIONS_FEE = 350;
+const FLOATER_ALL_STATIONS_FEE = 700;
+let totalWorkerReallocationSpend = 0;
+let totalFloaterTrainingSpend = 0;
+
+const RANDOM_EVENT_DIFFICULTY_THRESHOLD = 2;
+const RANDOM_EVENT_MIN_CHECK_SECONDS = 16;
+const RANDOM_EVENT_MAX_CHECK_SECONDS = 24;
+const RANDOM_EVENT_CHANCE = 0.38;
+let activeRandomEvent = null;
+let nextRandomEventCheck = 0;
+let randomEventsTriggered = 0;
+
+
+const REVENUE_PER_UNIT = 100;
+const LABOR_COST_PER_FULL_WORKER_PER_MINUTE = 45;
+const STARTING_CASH_BY_TIER = { easy: 1400, medium: 1200, max: 1100 };
+const COST_MULTIPLIER_BY_TIER = { easy: 0.9, medium: 1.0, max: 1.12 };
+const WORKER_HIRE_COST_BY_TIER = {
+  easy:   { Cutting: 280, Assembly: 320, Painting: 260, Packing: 280 },
+  medium: { Cutting: 360, Assembly: 410, Painting: 330, Packing: 360 },
+  max:    { Cutting: 460, Assembly: 520, Painting: 420, Packing: 460 }
+};
+const BASE_CAPACITY_COST_BY_STATION = { Cutting: 350, Assembly: 450, Painting: 300, Packing: 350 };
+const BASE_KAIZEN_COST = 400;
+const BASE_STANDARD_WORK_COST = 300;
+const BASE_LAYOUT_COST = 250;
+const CAPACITY_COST_MULTIPLIER = 1.30;
+const KAIZEN_COST_MULTIPLIER = 1.35;
+const STANDARD_WORK_COST_MULTIPLIER = 1.25;
+const LAYOUT_COST_MULTIPLIER = 1.30;
+const WIP_FREE_QUEUE_UNITS = 5;
+const OVERSTOCK_PENALTY_PER_EXCESS_UNIT = 2;
+const OVERSTOCK_GRACE_SECONDS = 10;
+let overstockSeconds = 0;
+let totalRevenueEarned = 0;
+let totalLaborSpend = 0;
+let totalWorkerHireSpend = 0;
+let totalUpgradeSpend = 0;
+let totalOverstockPenaltyPaid = 0;
+let totalWorkerCapacitySeconds = 0;
+let totalIdleWorkerSeconds = 0;
+let totalPaceTrackingSeconds = 0;
+let overproductionSeconds = 0;
+let initialBottleneckPace = 0;
+
+
+
+function getDifficultyTier(value = getCurrentDifficulty()) {
+  const max = getMaxDifficulty();
+  if (value >= max) return 'max';
+  if (value >= max * 0.5) return 'medium';
+  return 'easy';
+}
+
+function getDifficultyCostMultiplier() {
+  return COST_MULTIPLIER_BY_TIER[getDifficultyTier()] || 1;
+}
+
+function roundToTen(value) {
+  return Math.round(value / 10) * 10;
+}
+
+function getStartingCashForDifficulty() {
+  return STARTING_CASH_BY_TIER[getDifficultyTier()] || STARTING_CASH_BY_TIER.medium;
+}
+
+function getStationWorkerHireCost(stationName) {
+  const tier = getDifficultyTier();
+  const table = WORKER_HIRE_COST_BY_TIER[tier] || WORKER_HIRE_COST_BY_TIER.medium;
+  return roundToTen(table[stationName] || 360);
+}
+
+function getCapacityUpgradeCost(stationName) {
+  const base = BASE_CAPACITY_COST_BY_STATION[stationName] || 400;
+  return roundToTen(base * getDifficultyCostMultiplier());
+}
+
+function getKaizenCost() {
+  return roundToTen(BASE_KAIZEN_COST * getDifficultyCostMultiplier());
+}
+
+function getStandardWorkCost() {
+  return roundToTen(BASE_STANDARD_WORK_COST * getDifficultyCostMultiplier());
+}
+
+function getLayoutCost() {
+  return roundToTen(BASE_LAYOUT_COST * getDifficultyCostMultiplier());
+}
+
+function randWorkerCost(stationName = 'Cutting') {
+  // Controlled by difficulty instead of wide randomness. This keeps the game fair across rounds.
+  return getStationWorkerHireCost(stationName);
+}
+
+function randCycle() {
+  return Math.floor(Math.random() * 13 + 8); // 8 to 20 seconds
+}
+  
+const stations = [
+  { name: 'Cutting', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Cutting'), workers: 1, maxWorkers: 3, upgradeCost: getCapacityUpgradeCost('Cutting'), queue: [], processing: [], productivity: 1.0 },
+  { name: 'Assembly', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Assembly'), workers: 1, maxWorkers: 4, upgradeCost: getCapacityUpgradeCost('Assembly'), queue: [], processing: [], productivity: 1.0 },
+  { name: 'Painting', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Painting'), workers: 1, maxWorkers: 2, upgradeCost: getCapacityUpgradeCost('Painting'), queue: [], processing: [], productivity: 1.0 },
+  { name: 'Packing', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Packing'), workers: 1, maxWorkers: 3, upgradeCost: getCapacityUpgradeCost('Packing'), queue: [], processing: [], productivity: 1.0 }
+];
+
+
+function ensureUpgradeState() {
+  stations.forEach((station) => {
+    if (!Number.isFinite(station.upgradeCost)) station.upgradeCost = getCapacityUpgradeCost(station.name);
+    if (!Number.isFinite(station.kaizenCost)) station.kaizenCost = getKaizenCost();
+    if (!Number.isFinite(station.standardWorkCost)) station.standardWorkCost = getStandardWorkCost();
+    if (!Number.isFinite(station.layoutCost)) station.layoutCost = getLayoutCost();
+    if (!Number.isFinite(station.variationFactor)) station.variationFactor = 1;
+    if (!Number.isFinite(station.kaizenLevel)) station.kaizenLevel = 0;
+    if (!Number.isFinite(station.standardWorkLevel)) station.standardWorkLevel = 0;
+    if (!Number.isFinite(station.layoutLevel)) station.layoutLevel = 0;
+  });
+  if (!Array.isArray(transportTimes) || transportTimes.length !== stations.length - 1) {
+    transportTimes = Array.from({ length: stations.length - 1 }, () => BASE_TRANSPORT_TIME_SECONDS);
+  }
+  if (!Array.isArray(kanbanLimits) || kanbanLimits.length !== stations.length - 1) {
+    kanbanLimits = Array.from({ length: stations.length - 1 }, () => DEFAULT_KANBAN_LIMIT);
+  }
+}
+
+function resetUpgradeStateForStation(station) {
+  station.upgradeCost = getCapacityUpgradeCost(station.name);
+  station.kaizenCost = getKaizenCost();
+  station.standardWorkCost = getStandardWorkCost();
+  station.layoutCost = getLayoutCost();
+  station.variationFactor = 1;
+  station.kaizenLevel = 0;
+  station.standardWorkLevel = 0;
+  station.layoutLevel = 0;
+}
+
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function selectCustomerDemandUnits() {
+  return randInt(MIN_CUSTOMER_DEMAND_UNITS, MAX_CUSTOMER_DEMAND_UNITS);
+}
+
+function calculateTaktTimeGoal(demandUnits = customerDemandUnits) {
+  if (!demandUnits || demandUnits <= 0) return 0;
+  return +(AVAILABLE_PRODUCTION_TIME_SECONDS / demandUnits).toFixed(1);
+}
+
+function initializeDemandScenario() {
+  customerDemandUnits = selectCustomerDemandUnits();
+  taktTimeGoal = calculateTaktTimeGoal(customerDemandUnits);
+}
+
+
+function isRoundUnstarted() {
+  return !playing && time === 0 && totalProduced === 0 && getTotalWip() === 0 && activeTransports.length === 0;
+}
+
+function applyEconomyForCurrentDifficulty(resetCash = false) {
+  stations.forEach(station => {
+    station.workerCost = getStationWorkerHireCost(station.name);
+    resetUpgradeStateForStation(station);
+  });
+  if (resetCash) money = getStartingCashForDifficulty();
+}
+
+function captureInitialBottleneckPace() {
+  const values = stations.map(getEffectiveCycleTime).filter(Number.isFinite);
+  initialBottleneckPace = values.length ? Math.max(...values) : 0;
+}
+
+function formatPace(value) {
+  return value > 0 ? `${value}s/unit` : '—';
+}
+
+function createPartForStation(stationIndex) {
+  return {
+    remaining: variedCycleTime(stations[stationIndex].baseTime, stationIndex),
+    arrivalTime: time
+  };
+}
+
+function getTotalWip() {
+  const stationWip = stations.reduce((sum, station) => sum + station.queue.length + station.processing.length, 0);
+  return stationWip + activeTransports.length;
+}
+
+function getLinkWip(linkIndex) {
+  if (linkIndex < 0 || linkIndex >= stations.length - 1) return 0;
+  const downstream = stations[linkIndex + 1];
+  const inTransitToDownstream = activeTransports.filter(t => t.toStation === linkIndex + 1).length;
+  return downstream.queue.length + downstream.processing.length + inTransitToDownstream;
+}
+
+function canReleaseToNextStation(stationIndex) {
+  if (stationIndex >= stations.length - 1) return true;
+  return getLinkWip(stationIndex) < kanbanLimits[stationIndex];
+}
+
+function isStationBlocked(index) {
+  if (index >= stations.length - 1) return false;
+  const station = stations[index];
+  return station.processing.some(part => part.remaining <= 0 && part.blocked) ||
+    (station.processing.some(part => part.remaining <= 0) && !canReleaseToNextStation(index));
+}
+
+function countBlockedStations() {
+  return stations.filter((_, index) => isStationBlocked(index)).length;
+}
+
+function getFlowStatusText() {
+  const blocked = countBlockedStations();
+  if (blocked > 0) return `${blocked} BLOCKED`;
+  const totalQueued = stations.reduce((sum, station) => sum + station.queue.length, 0);
+  if (totalQueued === 0 && activeTransports.length === 0 && totalProduced === 0) return 'READY';
+  return 'FLOWING';
+}
+
+function getStationFlowState(index) {
+  const station = stations[index];
+  if (getStationProcessingCapacity(index) <= 0) return { label: 'NO WORKERS', css: 'no-workers' };
+  if (isStationBlocked(index)) return { label: 'BLOCKED - BUFFER FULL', css: 'blocked' };
+  if (station.processing.length > 0) return { label: 'RUNNING', css: 'running' };
+  if (station.queue.length === 0) return { label: index === 0 && supplyOn ? 'WAITING FOR DEMAND' : 'STARVED', css: 'starved' };
+  return { label: 'READY', css: 'idle' };
+}
+
+function adjustKanbanLimit(linkIndex, delta) {
+  ensureUpgradeState();
+  if (linkIndex < 0 || linkIndex >= kanbanLimits.length) return;
+  kanbanLimits[linkIndex] = Math.max(MIN_KANBAN_LIMIT, Math.min(MAX_KANBAN_LIMIT, kanbanLimits[linkIndex] + delta));
+  updateUI();
+}
+
+function getAverageLeadTime() {
+  if (completedLeadTimes.length === 0) return 0;
+  const sum = completedLeadTimes.reduce((a, b) => a + b, 0);
+  return +(sum / completedLeadTimes.length).toFixed(1);
+}
+
+function formatLeadTime(value) {
+  return value > 0 ? `${value}s` : '—';
+}
+
+function formatTravelTime(value) {
+  return `${Number(value).toFixed(1).replace('.0', '')}s`;
+}
+
+function getLiveOutputPace() {
+  if (lastProductTime <= 0) return actualOutputPace;
+  const timeSinceLastCompletion = time - lastProductTime;
+  if (actualOutputPace <= 0) return timeSinceLastCompletion;
+  return +Math.max(actualOutputPace, timeSinceLastCompletion).toFixed(1);
+}
+
+function variedCycleTime(baseTime, stationIndex = null) {
+  const station = Number.isInteger(stationIndex) ? stations[stationIndex] : null;
+  const variationFactor = station && Number.isFinite(station.variationFactor) ? station.variationFactor : 1;
+  const variation = (Math.random() - 0.5) * 2 * variability * variationFactor;
+  return Math.max(1, +(baseTime + variation).toFixed(2));
+}
+
+function randArrivalInterval() {
+  // Demand-paced arrivals. This is tied to customer takt, not the fastest station cycle time.
+  const goal = taktTimeGoal || calculateTaktTimeGoal(customerDemandUnits);
+  const variation = (Math.random() - 0.5) * 2 * variability;
+  return Math.max(1, Math.round(goal + variation));
+}
+
+function scheduleNextArrival() {
+  nextArrival = time + randArrivalInterval();
+}
+
+function getAssignedFloaterCount(index) {
+  return floaterWorkers.filter(f => f.assignedStation === index).length;
+}
+
+function getStationTotalWorkerSlots(index) {
+  return Math.max(0, stations[index].workers) + getAssignedFloaterCount(index);
+}
+
+function getStationWorkRates(index) {
+  const station = stations[index];
+  const rates = [];
+  const fixedWorkers = Math.max(0, station.workers);
+  if (fixedWorkers > 1) {
+    for (let n = 0; n < fixedWorkers - 1; n++) rates.push(1);
+    // The last fixed worker is the flex/part-time worker controlled by the Work % button.
+    rates.push(station.productivity || 1);
+  } else if (fixedWorkers === 1) {
+    rates.push(station.productivity || 1);
+  }
+  for (let n = 0; n < getAssignedFloaterCount(index); n++) rates.push(1);
+  return rates;
+}
+
+function getStationProcessingCapacity(index) {
+  return getStationWorkRates(index).length;
+}
+
+function getProcessingWorkRate(index, processingIndex) {
+  const rates = getStationWorkRates(index);
+  const rate = rates[processingIndex] || 0;
+  return +(rate * getStationEventSpeedMultiplier(index)).toFixed(3);
+}
+
+function stationHasUsableWork(index) {
+  const station = stations[index];
+  return !!station && (station.queue.length > 0 || station.processing.some(part => part.remaining > 0));
+}
+
+function canAssignFloaterToStation(floater, index) {
+  if (!floater || !stations[index]) return false;
+  const scope = floater.allStations ? stations.map((_, i) => i) : (Array.isArray(floater.scope) ? floater.scope : []);
+  if (!scope.includes(index)) return false;
+  const alreadyAssigned = floaterWorkers.filter(f => f !== floater && f.assignedStation === index).length;
+  return stations[index].workers + alreadyAssigned < stations[index].maxWorkers;
+}
+
+function getFloaterNeedScore(index) {
+  const station = stations[index];
+  if (!station) return -Infinity;
+  const queuePressure = station.queue.length * 100;
+  const processingPressure = station.processing.filter(part => part.remaining > 0).length * 20;
+  const hasWork = queuePressure + processingPressure > 0;
+  if (!hasWork) return 0;
+  const effectiveCycleTime = getEffectiveCycleTime(station);
+  const taktPressure = Number.isFinite(effectiveCycleTime) && taktTimeGoal > 0 && effectiveCycleTime > taktTimeGoal ? 55 : 0;
+  const constraintPressure = index === getLineConstraintIndex() ? 30 : 0;
+  const blockedPenalty = isStationBlocked(index) ? -50 : 0;
+  return queuePressure + processingPressure + taktPressure + constraintPressure + blockedPenalty + station.baseTime * 0.2;
+}
+
+function autoAssignFloaters() {
+  if (!Array.isArray(floaterWorkers) || floaterWorkers.length === 0) return;
+  floaterWorkers.forEach(f => { f.assignedStation = null; });
+
+  floaterWorkers.forEach(floater => {
+    if (!Number.isInteger(floater.homeStation) || !stations[floater.homeStation]) {
+      floater.homeStation = Array.isArray(floater.scope) && floater.scope.length ? floater.scope[0] : 0;
+    }
+    if (!floater.allStations) {
+      const scope = Array.isArray(floater.scope) ? floater.scope : [];
+      if (!scope.includes(floater.homeStation)) scope.unshift(floater.homeStation);
+      floater.scope = Array.from(new Set(scope.filter(index => Number.isInteger(index) && stations[index])));
+    }
+
+    const home = floater.homeStation;
+    const homeCanAccept = canAssignFloaterToStation(floater, home);
+    const homeHasWork = stationHasUsableWork(home);
+
+    // A floater belongs to the home station first. If the home station has work, the floater returns home.
+    if (homeCanAccept && homeHasWork) {
+      floater.assignedStation = home;
+      floater.lastAssignedStation = home;
+      return;
+    }
+
+    // If home is idle, send the floater to the trained station with the strongest active need.
+    const scope = floater.allStations ? stations.map((_, i) => i) : (Array.isArray(floater.scope) ? floater.scope : []);
+    let bestIndex = null;
+    let bestScore = 0;
+    scope.forEach(index => {
+      if (index === home) return;
+      if (!canAssignFloaterToStation(floater, index)) return;
+      const score = getFloaterNeedScore(index);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+
+    if (bestIndex !== null) {
+      floater.assignedStation = bestIndex;
+      floater.lastAssignedStation = bestIndex;
+      return;
+    }
+
+    // No trained station needs help, so the floater waits at home if there is capacity there.
+    if (homeCanAccept) {
+      floater.assignedStation = home;
+      floater.lastAssignedStation = home;
+    }
+  });
+}
+
+function getFloaterScopeLabel(floater) {
+  if (!floater) return '—';
+  if (floater.allStations) return 'All stations';
+  return (floater.scope || []).map(i => stations[i]?.name).filter(Boolean).join(' / ') || 'Selected stations';
+}
+
+function laborCostPerMinute() {
+  const fixedLabor = stations.reduce((sum, s) => {
+    if (s.workers === 1) {
+      return sum + (s.productivity * LABOR_COST_PER_FULL_WORKER_PER_MINUTE);
+    } else if (s.workers > 1) {
+      const fullTime = (s.workers - 1) * LABOR_COST_PER_FULL_WORKER_PER_MINUTE;
+      const partTime = s.productivity * LABOR_COST_PER_FULL_WORKER_PER_MINUTE;
+      return sum + fullTime + partTime;
+    }
+    return sum;
+  }, 0);
+  const floaterLabor = floaterWorkers.length * LABOR_COST_PER_FULL_WORKER_PER_MINUTE;
+  return fixedLabor + floaterLabor;
+}
+
+function getIdleWorkerRate() {
+  return totalWorkerCapacitySeconds > 0 ? totalIdleWorkerSeconds / totalWorkerCapacitySeconds : 0;
+}
+
+function getOverproductionRate() {
+  return totalPaceTrackingSeconds > 0 ? overproductionSeconds / totalPaceTrackingSeconds : 0;
+}
+
+function recordWasteMetrics() {
+  const totalWorkersThisSecond = stations.reduce((sum, station) => sum + Math.max(0, station.workers), 0) + floaterWorkers.length;
+  totalWorkerCapacitySeconds += totalWorkersThisSecond;
+
+  if (time > 15) {
+    const idleFixedWorkersThisSecond = stations.reduce((sum, station, index) => {
+      const hasWork = station.queue.length > 0 || station.processing.length > 0;
+      return hasWork ? sum : sum + Math.max(0, station.workers);
+    }, 0);
+    const idleFloatersThisSecond = floaterWorkers.reduce((sum, floater) => {
+      const assigned = Number.isInteger(floater.assignedStation) ? floater.assignedStation : null;
+      return assigned !== null && stationHasUsableWork(assigned) ? sum : sum + 1;
+    }, 0);
+    totalIdleWorkerSeconds += idleFixedWorkersThisSecond + idleFloatersThisSecond;
+  }
+
+  if (completionTimestamps.length >= 5 && taktTimeGoal > 0 && time > 20) {
+    totalPaceTrackingSeconds++;
+    const livePace = getLiveOutputPace();
+    const tooFast = livePace > 0 && livePace < Math.max(0, taktTimeGoal - getTaktToleranceSeconds());
+    if (tooFast) overproductionSeconds++;
+  }
+}
+
+function getCurrentDifficulty() {
+  const slider = document.getElementById('variabilitySlider');
+  const rawValue = slider ? parseFloat(slider.value) : variability;
+  return Number.isFinite(rawValue) ? rawValue : 0;
+}
+
+function getMaxDifficulty() {
+  const slider = document.getElementById('variabilitySlider');
+  const rawMax = slider ? parseFloat(slider.max) : RANDOM_EVENT_DIFFICULTY_THRESHOLD;
+  return Number.isFinite(rawMax) ? rawMax : RANDOM_EVENT_DIFFICULTY_THRESHOLD;
+}
+
+function isMaxDifficulty() {
+  return getCurrentDifficulty() >= getMaxDifficulty();
+}
+
+function formatDifficulty(value = getCurrentDifficulty()) {
+  const max = getMaxDifficulty();
+  const label = value >= max ? 'MAX - events ON' : (value >= max * 0.5 ? 'Medium' : 'Easy');
+  return `${Number(value).toFixed(1).replace('.0', '')} / ${Number(max).toFixed(0)} ${label}`;
+}
+
+function scheduleNextRandomEventCheck() {
+  nextRandomEventCheck = time + randInt(RANDOM_EVENT_MIN_CHECK_SECONDS, RANDOM_EVENT_MAX_CHECK_SECONDS);
+}
+
+function clearRandomEvent(showEndedNotice = false) {
+  if (showEndedNotice && activeRandomEvent) {
+    showEventNotice(`✅ Event cleared: ${activeRandomEvent.shortLabel || activeRandomEvent.label}`, 'good');
+  }
+  activeRandomEvent = null;
+}
+
+function showEventNotice(message, cssClass = 'warning') {
+  const eventNotice = document.getElementById('eventNotice');
+  if (!eventNotice) return;
+  eventNotice.className = cssClass;
+  eventNotice.innerHTML = message;
+  eventNotice.style.display = 'block';
+  if (eventNotice.timeoutId) clearTimeout(eventNotice.timeoutId);
+  eventNotice.timeoutId = setTimeout(() => {
+    eventNotice.style.display = 'none';
+    eventNotice.timeoutId = null;
+  }, 4200);
+}
+
+function isMaterialShortageActive() {
+  return activeRandomEvent && activeRandomEvent.type === 'material_shortage';
+}
+
+function getStationEventSpeedMultiplier(index) {
+  if (!activeRandomEvent) return 1;
+  if (activeRandomEvent.type === 'station_slowdown' && activeRandomEvent.stationIndex === index) {
+    return activeRandomEvent.speedMultiplier;
+  }
+  return 1;
+}
+
+function getTransportEventMultiplier(linkIndex) {
+  if (!activeRandomEvent) return 1;
+  if (activeRandomEvent.type === 'transport_delay' && activeRandomEvent.linkIndex === linkIndex) {
+    return activeRandomEvent.transportMultiplier;
+  }
+  return 1;
+}
+
+function getRandomEventStatusText() {
+  if (!isMaxDifficulty()) return 'Off';
+  if (!activeRandomEvent) return 'Armed';
+  const remaining = Math.max(0, activeRandomEvent.endsAt - time);
+  return `${activeRandomEvent.shortLabel} (${remaining}s)`;
+}
+
+function triggerRandomEvent() {
+  const eventType = randInt(1, 3);
+  const duration = randInt(16, 24);
+  randomEventsTriggered++;
+
+  if (eventType === 1) {
+    const stationIndex = randInt(0, stations.length - 1);
+    const station = stations[stationIndex];
+    activeRandomEvent = {
+      type: 'station_slowdown',
+      shortLabel: `${station.name} slowdown`,
+      label: `Machine slowdown at ${station.name}`,
+      stationIndex,
+      speedMultiplier: 0.55,
+      endsAt: time + duration
+    };
+    showEventNotice(`🎲 Random Event: <strong>${activeRandomEvent.label}</strong><br>${station.name} works at 55% speed for ${duration}s. Find the new constraint and protect flow.`, 'warning');
+    return;
+  }
+
+  if (eventType === 2) {
+    const linkIndex = randInt(0, stations.length - 2);
+    activeRandomEvent = {
+      type: 'transport_delay',
+      shortLabel: `${stations[linkIndex].name} lane delay`,
+      label: `Transport delay: ${stations[linkIndex].name} → ${stations[linkIndex + 1].name}`,
+      linkIndex,
+      transportMultiplier: 2,
+      endsAt: time + duration
+    };
+    showEventNotice(`🎲 Random Event: <strong>${activeRandomEvent.label}</strong><br>Travel time doubles for ${duration}s. Watch WIP and Kanban blocking.`, 'warning');
+    return;
+  }
+
+  activeRandomEvent = {
+    type: 'material_shortage',
+    shortLabel: 'Material shortage',
+    label: 'Material shortage at incoming supply',
+    endsAt: time + duration
+  };
+  showEventNotice(`🎲 Random Event: <strong>${activeRandomEvent.label}</strong><br>No new parts enter the line for ${duration}s. Use the pause to stabilize WIP and bottlenecks.`, 'warning');
+}
+
+function updateRandomEvents() {
+  if (!isMaxDifficulty()) {
+    if (activeRandomEvent) clearRandomEvent();
+    nextRandomEventCheck = 0;
+    return;
+  }
+
+  if (activeRandomEvent) {
+    if (time >= activeRandomEvent.endsAt) {
+      clearRandomEvent(true);
+      scheduleNextRandomEventCheck();
+    }
+    return;
+  }
+
+  if (nextRandomEventCheck <= 0) scheduleNextRandomEventCheck();
+  if (time >= nextRandomEventCheck) {
+    if (Math.random() < RANDOM_EVENT_CHANCE) {
+      triggerRandomEvent();
+    }
+    scheduleNextRandomEventCheck();
+  }
+}
+
+function getStationWorkRate(station) {
+  const stationIndex = stations.indexOf(station);
+  if (stationIndex < 0) return 0;
+  const eventMultiplier = getStationEventSpeedMultiplier(stationIndex);
+  const baseRate = getStationWorkRates(stationIndex).reduce((sum, rate) => sum + rate, 0);
+  return +(baseRate * eventMultiplier).toFixed(3);
+}
+
+function getEffectiveCycleTime(station) {
+  const workRate = getStationWorkRate(station);
+  if (workRate <= 0) return Infinity;
+  return +(station.baseTime / workRate).toFixed(1);
+}
+
+
+function getStationCapacityUnitsPerMinute(station) {
+  const effectiveCycleTime = getEffectiveCycleTime(station);
+  if (!Number.isFinite(effectiveCycleTime) || effectiveCycleTime <= 0) return 0;
+  return +(60 / effectiveCycleTime).toFixed(1);
+}
+
+function getCapacityStatus(station) {
+  const effectiveCycleTime = getEffectiveCycleTime(station);
+  const capacity = getStationCapacityUnitsPerMinute(station);
+  if (!Number.isFinite(effectiveCycleTime) || effectiveCycleTime <= 0) {
+    return { label: 'NO CAPACITY', css: 'bad', capacity };
+  }
+  if (effectiveCycleTime <= taktTimeGoal) {
+    return { label: 'MEETS TAKT', css: 'good', capacity };
+  }
+  if (effectiveCycleTime <= taktTimeGoal * 1.2) {
+    return { label: 'SLIGHTLY SHORT', css: 'warning', capacity };
+  }
+  return { label: 'CANNOT MEET TAKT', css: 'bad', capacity };
+}
+
+function formatEffectiveCycleTime(value) {
+  return Number.isFinite(value) ? formatPace(value) : 'No capacity';
+}
+
+function getTaktToleranceSeconds() {
+  if (!taktTimeGoal || taktTimeGoal <= 0) return MAX_TAKT_TOLERANCE_SECONDS;
+  const rawTolerance = taktTimeGoal * TAKT_TOLERANCE_PERCENT;
+  return +Math.max(MIN_TAKT_TOLERANCE_SECONDS, Math.min(MAX_TAKT_TOLERANCE_SECONDS, rawTolerance)).toFixed(1);
+}
+
+function getPaceVsTaktText() {
+  const pace = getLiveOutputPace();
+  if (!pace || !taktTimeGoal) return 'no stable output yet';
+  const diff = +(pace - taktTimeGoal).toFixed(1);
+  const tolerance = getTaktToleranceSeconds();
+  if (Math.abs(diff) <= tolerance) return 'aligned to takt';
+  return diff > 0
+    ? `${formatPace(Math.abs(diff))} slower than takt`
+    : `${formatPace(Math.abs(diff))} faster than takt`;
+}
+
+function allStationsMeetTakt() {
+  return getCurrentBottleneckIndex() === null;
+}
+
+function getStationWip(station) {
+  return station.queue.length + station.processing.length;
+}
+
+function getLineConstraintIndex() {
+  // In a linear flow, the system still has one slowest current constraint.
+  // This helper identifies it even when every station can meet takt.
+  // Primary rule: slowest effective station capacity pace.
+  // Tie-breakers: highest current WIP, then earliest upstream station.
+  const EPSILON = 0.01;
+  let constraintIndex = 0;
+  let constraintCycleTime = getEffectiveCycleTime(stations[0]);
+
+  for (let i = 1; i < stations.length; i++) {
+    const candidateCycleTime = getEffectiveCycleTime(stations[i]);
+    const candidateIsSlower = candidateCycleTime > constraintCycleTime + EPSILON;
+    const candidateIsTied = Math.abs(candidateCycleTime - constraintCycleTime) <= EPSILON;
+    const candidateHasMoreWip = getStationWip(stations[i]) > getStationWip(stations[constraintIndex]);
+
+    if (candidateIsSlower || (candidateIsTied && candidateHasMoreWip)) {
+      constraintIndex = i;
+      constraintCycleTime = candidateCycleTime;
+    }
+  }
+
+  return constraintIndex;
+}
+
+function getCurrentBottleneckIndex() {
+  // Only show an active bottleneck warning when the slowest station is slower than customer takt.
+  // If all stations are under/equal to takt, the line has a current constraint but no takt-breaking bottleneck.
+  const EPSILON = 0.01;
+  if (!taktTimeGoal || taktTimeGoal <= 0) return getLineConstraintIndex();
+  const constraintIndex = getLineConstraintIndex();
+  const constraintCycleTime = getEffectiveCycleTime(stations[constraintIndex]);
+  return constraintCycleTime > taktTimeGoal + EPSILON ? constraintIndex : null;
+}
+
+
+
+
+function getStationSlug(name) {
+  const normalized = String(name || '').toLowerCase().trim();
+  if (normalized === 'painting') return 'inspection';
+  return normalized.replace(/[^a-z0-9]+/g, '-');
+}
+
+function getStationNumber(index) {
+  return index + 1;
+}
+
+const STATION_ASSET_IMAGES = {
+  cutting: "assets/cutting.jpg",
+  assembly: "assets/assembly.jpg",
+  inspection: "assets/painting.jpg",
+  packing: "assets/packing.jpg"
+};
+
+const STATION_ACTIVE_GIFS = {
+  cutting: "assets/cutting_active.gif",
+  assembly: "assets/assembly_active.gif",
+  inspection: "assets/painting_active.gif",
+  packing: "assets/packing_active.gif"
+};
+
+function getMachineMarkup(slug, isAnimated = false) {
+  const src = isAnimated
+    ? (STATION_ACTIVE_GIFS[slug] || STATION_ASSET_IMAGES[slug] || STATION_ASSET_IMAGES.cutting)
+    : (STATION_ASSET_IMAGES[slug] || STATION_ASSET_IMAGES.cutting);
+  return `<img class="station-asset ${isAnimated ? 'animated' : 'still'}" src="${src}" alt="${slug} workcell image">`;
+}
+
+function makePartIcons(count, maxShown = 8, cssClass = '') {
+  const visible = Math.min(maxShown, Math.max(0, count));
+  const icons = Array.from({ length: visible }, () => `<span class="part-icon ${cssClass}">📦</span>`).join('');
+  const extra = count > maxShown ? `<span class="overflow-count">+${count - maxShown}</span>` : '';
+  return icons + extra;
+}
+
+
+function updateUI() {
+  ensureUpgradeState();
+  if (taktTimeGoal === 0 || customerDemandUnits === 0) {
+    initializeDemandScenario();
+  }
+  autoAssignFloaters();
+  const productivityLevels = [0.25, 0.5, 0.75, 1.0];
+  let totalWorkerCost = laborCostPerMinute();
+
+  document.getElementById("countdown").innerText = Math.max(0, nextArrival - time);
+  const moneyElem = document.getElementById("money");
+  moneyElem.innerText = Math.round(money);
+  moneyElem.style.color = money < 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById("timer").innerText = time < 60 ? `${time}s` : `${Math.floor(time / 60)}m ${time % 60}s`;
+  document.getElementById("customerDemand").innerText = customerDemandUnits || '—';
+  document.getElementById("taktTime").innerText = formatPace(taktTimeGoal);
+  const actualOutputElem = document.getElementById("actualOutputPace");
+  if (actualOutputElem) actualOutputElem.innerText = formatPace(getLiveOutputPace());
+  document.getElementById("totalProduced").innerText = totalProduced;
+  document.getElementById("totalWip").innerText = getTotalWip();
+  const flowStatusElem = document.getElementById("flowStatus");
+  if (flowStatusElem) {
+    flowStatusElem.innerText = getFlowStatusText();
+    flowStatusElem.style.color = countBlockedStations() > 0 ? 'var(--red)' : 'var(--green)';
+  }
+  const randomEventStatusElem = document.getElementById('randomEventStatus');
+  const randomEventCard = document.getElementById('randomEventCard');
+  if (randomEventStatusElem) randomEventStatusElem.innerText = getRandomEventStatusText();
+  if (randomEventCard) randomEventCard.classList.toggle('event-active', !!activeRandomEvent);
+  document.getElementById("avgLeadTime").innerText = formatLeadTime(getAverageLeadTime());
+  document.getElementById("workerCost").innerText = Math.round(totalWorkerCost);
+
+  const bottleneckIndex = getCurrentBottleneckIndex();
+  const hasActiveBottleneck = Number.isInteger(bottleneckIndex);
+  const bottleneckStatusElem = document.getElementById("bottleneckStatus");
+  if (hasActiveBottleneck) {
+    const bottleneckStation = stations[bottleneckIndex];
+    const bottleneckCycleTime = getEffectiveCycleTime(bottleneckStation);
+    bottleneckStatusElem.innerText = `${bottleneckStation.name} (${formatEffectiveCycleTime(bottleneckCycleTime)})`;
+    bottleneckStatusElem.style.color = 'var(--red)';
+  } else {
+    bottleneckStatusElem.innerText = 'None — all stations meet takt';
+    bottleneckStatusElem.style.color = 'var(--green)';
+  }
+
+  const factory = document.getElementById("factory");
+  factory.innerHTML = '';
+  stations.forEach((s, i) => {
+    const productivityLabel = Math.round(s.productivity * 100);
+    const effectiveCycleTime = getEffectiveCycleTime(s);
+    const status = getCapacityStatus(s);
+    const flowState = getStationFlowState(i);
+    const blocked = flowState.css === 'blocked';
+    const isBottleneck = hasActiveBottleneck && i === bottleneckIndex;
+    const availableWorkerSlots = getStationProcessingCapacity(i);
+    const utilization = availableWorkerSlots > 0 ? (s.processing.length / availableWorkerSlots) : 0;
+    const barHeight = Math.min(100, Math.floor(utilization * 100));
+    const assignedFloaters = getAssignedFloaterCount(i);
+    const fixedWorkerIcons = Array.from({ length: s.workers }, (_, idx) => idx === s.workers - 1 ? `<span title="Flex worker availability: ${Math.round(s.productivity * 100)}%" style="color:${s.productivity < 1 ? '#f36c21' : 'inherit'};">👷</span>` : '👷').join('');
+    const floaterIcons = assignedFloaters > 0 ? `<span title="Floater worker assigned here automatically" style="color:#1769aa;">${'🧑‍🔧'.repeat(assignedFloaters)}</span>` : '';
+    let bgColor = "#00ff00";
+    if (barHeight === 0) bgColor = "repeating-linear-gradient(45deg, red 0, red 5px, #111 5px, #111 10px)";
+    else if (barHeight < 50) bgColor = "orange";
+    else if (barHeight < 80) bgColor = "yellow";
+
+    const div = document.createElement("div");
+    const active = s.processing.length > 0;
+    const slug = getStationSlug(s.name);
+    div.className = `station ${slug}` + (active ? ' active' : '') + (!playing ? ' paused' : '') + (isBottleneck ? ' bottleneck' : '') + (blocked ? ' blocked' : '');
+    div.innerHTML = `
+      ${isBottleneck ? '<div class="bottleneck-badge">⚠ CURRENT BOTTLENECK</div>' : ''}
+      <div class="workcell">
+        <div class="station-sign"><span class="station-number">${getStationNumber(i)}</span><span>${s.name}</span></div>
+        <div class="machine-scene">${getMachineMarkup(slug, active && playing)}</div>
+      </div>
+      <div class="station-card ${isBottleneck ? 'bottleneck-card' : ''}">
+        <div class="station-metrics">
+          <div class="stat-pill"><span>CT</span><span>${s.baseTime}s</span></div>
+          <div class="stat-pill"><span>Eff</span><span>${formatEffectiveCycleTime(effectiveCycleTime).replace('/unit', '')}</span></div>
+          <div class="stat-pill"><span>Q</span><span>${s.queue.length}</span></div>
+          <div class="stat-pill"><span>WIP</span><span>${getStationWip(s)}</span></div>
+        </div>
+        <div class="capacity-status ${status.css}">${status.label}<br>Cap: ${status.capacity}/min | Demand: ${customerDemandUnits}/min</div>
+        <div class="flow-state ${flowState.css}">${flowState.label}</div>
+        <div class="worker-row"><span>Workers ${s.workers}${assignedFloaters ? ` +${assignedFloaters}F` : ''}/${s.maxWorkers}</span><span>Flex ${Math.round(s.productivity * 100)}%</span><span class="worker-icons">${fixedWorkerIcons}${floaterIcons}</span></div>
+        <div class="visual-row"><span class="visual-label">Queue</span><span class="part-icons">${makePartIcons(s.queue.length, 8)}</span></div>
+        <div class="visual-row"><span class="visual-label">Proc</span><span class="part-icons">${makePartIcons(s.processing.length, 4, 'processing')}</span></div>
+        <div class="station-actions">
+          <button class="station-btn primary" onclick="addWorker(${i})">Hire $${s.workerCost}</button>
+          <button class="station-btn danger" onclick="removeWorker(${i})">Lay Off</button>
+          <button class="station-btn primary" onclick="openUpgradeMenu(${i})">Upgrades...</button>
+          <button class="station-btn lean" onclick="toggleProductivity(${i})" title="Changes only the last fixed worker. Earlier workers stay full-time; floaters are full-time when assigned.">Flex: ${productivityLabel}%</button>
+        </div>
+      </div>
+      <div class="util-gauge"><div class="util-fill" style="height:${barHeight}%; background:${barHeight === 0 ? 'linear-gradient(180deg, #ff6a52, #c62828)' : (barHeight < 50 ? 'linear-gradient(180deg, #ffbf47, #f36c21)' : (barHeight < 80 ? 'linear-gradient(180deg, #ffe16b, #f3b800)' : 'linear-gradient(180deg, #32dd7f, #16803f)'))};"></div><div class="util-label">Util</div></div>
+    `;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'station-wrapper';
+    wrapper.appendChild(div);
+    if (i < stations.length - 1) {
+      const travelLabel = document.createElement('div');
+      travelLabel.className = 'travel-label';
+      const activeTravelTime = transportTimes[i] * getTransportEventMultiplier(i);
+      travelLabel.textContent = `${formatTravelTime(activeTravelTime)} travel`;
+      if (getTransportEventMultiplier(i) > 1) travelLabel.title = 'Random event active: this transport lane is delayed.';
+      wrapper.appendChild(travelLabel);
+
+      const linkWip = getLinkWip(i);
+      const isKanbanFull = linkWip >= kanbanLimits[i];
+      const atMinKanban = kanbanLimits[i] <= MIN_KANBAN_LIMIT;
+      const atMaxKanban = kanbanLimits[i] >= MAX_KANBAN_LIMIT;
+      const kanbanHelpText = `The transit buffer sets the WIP cap between ${s.name} and ${stations[i + 1].name}. Use − to lower the limit by 1 and restrict inventory in transit. Use + to raise the limit by 1 and allow more pieces to wait between stations. Lower limits can reduce WIP and lead time but may starve the next station. Higher limits can prevent starvation but may increase WIP and lead time. Range: ${MIN_KANBAN_LIMIT} to ${MAX_KANBAN_LIMIT}.`;
+      const minusTitle = atMinKanban
+        ? `Already at the minimum transit buffer limit (${MIN_KANBAN_LIMIT}). You cannot lower it further.`
+        : `Lower the transit buffer limit by 1. This tightens pull flow and can reduce inventory, but may starve the next station. Minimum limit: ${MIN_KANBAN_LIMIT}.`;
+      const plusTitle = atMaxKanban
+        ? `Already at the maximum transit buffer limit (${MAX_KANBAN_LIMIT}). You cannot raise it further.`
+        : `Raise the transit buffer limit by 1. This allows more inventory between stations and can reduce starvation, but may increase WIP and lead time. Maximum limit: ${MAX_KANBAN_LIMIT}.`;
+      const kanbanCard = document.createElement('div');
+      kanbanCard.className = `kanban-card ${isKanbanFull ? 'full' : ''}`;
+      kanbanCard.innerHTML = `
+        <div class="kanban-help" title="${kanbanHelpText}">?</div>
+        <div class="kanban-title" title="${kanbanHelpText}">Transit WIP</div>
+        <div class="kanban-route" title="${kanbanHelpText}">${s.name} → ${stations[i + 1].name}</div>
+        <div class="kanban-meter">
+          <button type="button" onclick="adjustKanbanLimit(${i}, -1)" title="${minusTitle}" ${atMinKanban ? 'disabled' : ''}>−</button>
+          <span title="Current in-transit WIP / transit buffer limit. When the first number reaches the second number, the upstream station will be blocked.">${linkWip}/${kanbanLimits[i]}</span>
+          <button type="button" onclick="adjustKanbanLimit(${i}, 1)" title="${plusTitle}" ${atMaxKanban ? 'disabled' : ''}>+</button>
+        </div>
+      `;
+      wrapper.appendChild(kanbanCard);
+    }
+    factory.appendChild(wrapper);
+  });
+
+  drawLineBalanceChart(bottleneckIndex);
+}
+
+
+function drawLineBalanceChart(bottleneckIndex = getCurrentBottleneckIndex()) {
+  const canvas = document.getElementById('lineBalanceChart');
+  if (!canvas || taktTimeGoal <= 0) return;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const margin = { left: 42, right: 10, top: 9, bottom: 22 };
+  const plotW = canvas.width - margin.left - margin.right;
+  const plotH = canvas.height - margin.top - margin.bottom;
+  const values = stations.map(getEffectiveCycleTime);
+  const finiteValues = values.filter(Number.isFinite);
+  const maxStationPace = finiteValues.length ? Math.max(...finiteValues) : taktTimeGoal;
+  const maxY = Math.max(taktTimeGoal * 1.35, maxStationPace * 1.15, 10);
+
+  function yScale(value) {
+    return margin.top + plotH - (value / maxY) * plotH;
+  }
+
+  // Background grid and y-axis labels.
+  ctx.strokeStyle = 'rgba(25, 45, 60, 0.16)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#16803f';
+  ctx.font = '9px Courier New';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+
+  for (let i = 0; i <= 4; i++) {
+    const value = maxY * (i / 4);
+    const y = yScale(value);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(canvas.width - margin.right, y);
+    ctx.stroke();
+    ctx.fillText(value.toFixed(0), margin.left - 8, y);
+  }
+
+  // Axis lines.
+  ctx.strokeStyle = '#334653';
+  ctx.beginPath();
+  ctx.moveTo(margin.left, margin.top);
+  ctx.lineTo(margin.left, margin.top + plotH);
+  ctx.lineTo(canvas.width - margin.right, margin.top + plotH);
+  ctx.stroke();
+
+  // Takt line.
+  const taktY = yScale(taktTimeGoal);
+  ctx.strokeStyle = '#f3b800';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(margin.left, taktY);
+  ctx.lineTo(canvas.width - margin.right, taktY);
+  ctx.stroke();
+  ctx.fillStyle = '#f3b800';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(`Customer Takt: ${formatPace(taktTimeGoal)}`, margin.left + 6, taktY - 3);
+
+  const slot = plotW / stations.length;
+  const barW = Math.min(70, slot * 0.5);
+
+  stations.forEach((station, i) => {
+    const pace = values[i];
+    const cappedPace = Number.isFinite(pace) ? Math.min(pace, maxY) : maxY;
+    const barX = margin.left + slot * i + (slot - barW) / 2;
+    const barY = yScale(cappedPace);
+    const barH = margin.top + plotH - barY;
+    const status = getCapacityStatus(station);
+
+    if (i === bottleneckIndex) {
+      ctx.fillStyle = '#c62828';
+      ctx.shadowColor = '#ff4b35';
+      ctx.shadowBlur = 10;
+    } else if (status.css === 'good') {
+      ctx.fillStyle = '#16803f';
+      ctx.shadowBlur = 0;
+    } else if (status.css === 'warning') {
+      ctx.fillStyle = '#f3b800';
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.fillStyle = '#f36c21';
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = i === bottleneckIndex ? '#ffffff' : 'rgba(25, 45, 60, 0.22)';
+    ctx.lineWidth = i === bottleneckIndex ? 2 : 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    ctx.fillStyle = i === bottleneckIndex ? '#c62828' : '#334653';
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(formatEffectiveCycleTime(pace).replace('/unit', ''), barX + barW / 2, barY - 4);
+
+    ctx.fillStyle = '#16803f';
+    ctx.textBaseline = 'top';
+    ctx.fillText(station.name, barX + barW / 2, margin.top + plotH + 8);
+
+    if (i === bottleneckIndex) {
+      ctx.fillStyle = '#c62828';
+      ctx.font = '11px Courier New';
+      ctx.fillText('BOTTLENECK', barX + barW / 2, margin.top + plotH + 25);
+    }
+  });
+
+  ctx.save();
+  ctx.translate(15, margin.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#16803f';
+  ctx.font = '11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Pace (s/unit)', 0, 0);
+  ctx.restore();
+}
+
+function drawOutputPaceChart() {
+  const canvas = document.getElementById('taktChart');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const historyMax = outputPaceHistory.length ? Math.max(...outputPaceHistory) : 0;
+  const maxY = Math.max((taktTimeGoal || calculateTaktTimeGoal(customerDemandUnits)) * 2, historyMax, 10);
+  const numGridLines = 5;
+
+  // Draw grid lines
+  ctx.strokeStyle = '#007700';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 1; i < numGridLines; i++) {
+    const y = canvas.height * (i / numGridLines);
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+  }
+  for (let i = 1; i < 6; i++) {
+    const x = canvas.width * (i / 6);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+  }
+  ctx.stroke();
+
+  // Draw baseline
+  ctx.strokeStyle = 'rgba(25, 45, 60, 0.16)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height - 1);
+  ctx.lineTo(canvas.width, canvas.height - 1);
+  ctx.stroke();
+
+  // Draw Y-axis tick labels
+  ctx.fillStyle = '#16803f';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= numGridLines; i++) {
+    const y = canvas.height * (i / numGridLines);
+    const value = (maxY * (1 - i / numGridLines)).toFixed(0);
+    ctx.fillText(value, canvas.width - 4, y);
+  }
+
+  // Draw X-axis tick labels as the last 60 output-pace observations
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let i = 1; i <= 6; i++) {
+    const x = canvas.width * (i / 6);
+    ctx.fillText((i * 10).toString(), x, canvas.height - 10);
+  }
+
+  if (outputPaceHistory.length >= 2) {
+    ctx.strokeStyle = '#334653';
+    ctx.beginPath();
+    outputPaceHistory.forEach((val, idx) => {
+      const x = (idx / Math.max(60, outputPaceHistory.length - 1)) * canvas.width;
+      const y = canvas.height - (val / maxY) * canvas.height;
+      if (idx === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  if (taktTimeGoal > 0) {
+    ctx.strokeStyle = '#f3b800';
+    const goalY = canvas.height - (taktTimeGoal / maxY) * canvas.height;
+    ctx.beginPath();
+    ctx.moveTo(0, goalY);
+    ctx.lineTo(canvas.width, goalY);
+    ctx.stroke();
+  }
+}
+
+function finishTransport(transportId) {
+  const transport = activeTransports.find(t => t.id === transportId);
+  if (!transport) return;
+
+  if (transport.timeoutId) clearTimeout(transport.timeoutId);
+  if (transport.icon) transport.icon.remove();
+  activeTransports = activeTransports.filter(t => t.id !== transportId);
+
+  if (transport.sessionId !== gameSessionId) {
+    updateUI();
+    return;
+  }
+
+  transport.part.remaining = variedCycleTime(stations[transport.toStation].baseTime, transport.toStation);
+  stations[transport.toStation].queue.push(transport.part);
+  updateUI();
+}
+
+function scheduleTransportCompletion(transport, delayMs) {
+  if (!transport) return;
+  if (transport.timeoutId) clearTimeout(transport.timeoutId);
+  transport.remainingMs = Math.max(0, delayMs);
+  transport.startedRealMs = Date.now();
+  transport.timeoutId = setTimeout(() => finishTransport(transport.id), transport.remainingMs);
+}
+
+function pauseActiveTransports() {
+  activeTransports.forEach(transport => {
+    if (!transport || !transport.icon || transport.paused) return;
+    if (transport.timeoutId) clearTimeout(transport.timeoutId);
+
+    const elapsedMs = Date.now() - (transport.startedRealMs || Date.now());
+    transport.remainingMs = Math.max(0, (transport.remainingMs || 0) - elapsedMs);
+
+    const currentTransform = window.getComputedStyle(transport.icon).transform;
+    transport.icon.style.transition = 'none';
+    if (currentTransform && currentTransform !== 'none') {
+      transport.icon.style.transform = currentTransform;
+    }
+    transport.paused = true;
+  });
+}
+
+function resumeActiveTransports() {
+  activeTransports.slice().forEach(transport => {
+    if (!transport || !transport.icon || !transport.paused) return;
+    transport.paused = false;
+
+    if ((transport.remainingMs || 0) <= 0) {
+      finishTransport(transport.id);
+      return;
+    }
+
+    transport.icon.getBoundingClientRect();
+    transport.icon.style.transition = `transform ${transport.remainingMs}ms linear`;
+    requestAnimationFrame(() => {
+      transport.icon.style.transform = `translate(${transport.endX - transport.startX}px, ${transport.endY - transport.startY}px)`;
+    });
+    scheduleTransportCompletion(transport, transport.remainingMs);
+  });
+}
+
+function pauseGameplayForUpgradeMenu() {
+  resumeAfterUpgradeMenu = playing;
+  pauseActiveTransports();
+  if (playing) {
+    clearInterval(timerInterval);
+    playing = false;
+    const btn = document.getElementById("togglePlayBtn");
+    if (btn) btn.innerText = "▶️ Play";
+    updateUI();
+  }
+}
+
+function resumeGameplayAfterUpgradeMenu() {
+  if (resumeAfterUpgradeMenu && !gameWon && !gameLost) {
+    playing = true;
+    const btn = document.getElementById("togglePlayBtn");
+    if (btn) btn.innerText = "⏸️ Pause";
+    clearInterval(timerInterval);
+    timerInterval = setInterval(advanceTime, speed);
+    resumeActiveTransports();
+  }
+  resumeAfterUpgradeMenu = false;
+}
+
+function openUpgradeMenu(index = null) {
+  ensureUpgradeState();
+  if (!upgradeMenuOpen) {
+    pauseGameplayForUpgradeMenu();
+  }
+  upgradeMenuOpen = true;
+  if (Number.isInteger(index)) {
+    selectedUpgradeStationIndex = Math.max(0, Math.min(stations.length - 1, index));
+  } else {
+    const bottleneckIndex = getCurrentBottleneckIndex();
+    selectedUpgradeStationIndex = Number.isInteger(bottleneckIndex) ? bottleneckIndex : getLineConstraintIndex();
+  }
+  renderUpgradeMenu();
+  const modal = document.getElementById('upgradeModal');
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeUpgradeMenu(shouldResume = true) {
+  const modal = document.getElementById('upgradeModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  const wasOpen = upgradeMenuOpen;
+  upgradeMenuOpen = false;
+  if (shouldResume && wasOpen) {
+    resumeGameplayAfterUpgradeMenu();
+  } else {
+    resumeAfterUpgradeMenu = false;
+  }
+}
+
+function openWorkerMenu() {
+  if (!workerMenuOpen) {
+    pauseGameplayForUpgradeMenu();
+  }
+  workerMenuOpen = true;
+  renderWorkerMenu();
+  const modal = document.getElementById('workerModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeWorkerMenu(shouldResume = true) {
+  const modal = document.getElementById('workerModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  const wasOpen = workerMenuOpen;
+  workerMenuOpen = false;
+  if (shouldResume && wasOpen) {
+    resumeGameplayAfterUpgradeMenu();
+  } else {
+    resumeAfterUpgradeMenu = false;
+  }
+}
+
+function setWorkerFeedback(message, type = '') {
+  const feedback = document.getElementById('workerFeedback');
+  if (!feedback) return;
+  feedback.className = `upgrade-feedback ${type}`.trim();
+  feedback.textContent = message;
+}
+
+function getStationOptionMarkup(selectedIndex = 0) {
+  return stations.map((station, index) => `<option value="${index}" ${index === selectedIndex ? 'selected' : ''}>${station.name} (${station.workers} fixed${getAssignedFloaterCount(index) ? ` + ${getAssignedFloaterCount(index)}F` : ''}/${station.maxWorkers})</option>`).join('');
+}
+
+function renderWorkerMenu() {
+  autoAssignFloaters();
+  const workerMoney = document.getElementById('workerMoney');
+  if (workerMoney) workerMoney.textContent = Math.round(money).toLocaleString();
+  const moveFee = document.getElementById('moveFeeLabel');
+  if (moveFee) moveFee.textContent = WORKER_REALLOCATION_FEE.toLocaleString();
+  const selectedFee = document.getElementById('selectedFloaterFeeLabel');
+  if (selectedFee) selectedFee.textContent = FLOATER_SELECTED_STATIONS_FEE.toLocaleString();
+  const allFee = document.getElementById('allFloaterFeeLabel');
+  if (allFee) allFee.textContent = FLOATER_ALL_STATIONS_FEE.toLocaleString();
+
+  const moveFrom = document.getElementById('moveFromStation');
+  const moveTo = document.getElementById('moveToStation');
+  const floaterSource = document.getElementById('floaterSourceStation');
+  const previousMode = document.getElementById('floaterScopeMode')?.value || 'selected';
+  if (moveFrom) moveFrom.innerHTML = getStationOptionMarkup(0);
+  if (moveTo) moveTo.innerHTML = getStationOptionMarkup(1);
+  if (floaterSource) floaterSource.innerHTML = getStationOptionMarkup(0);
+  const scopeMode = document.getElementById('floaterScopeMode');
+  if (scopeMode) scopeMode.value = previousMode;
+
+  const scopeChecks = document.getElementById('floaterScopeChecks');
+  if (scopeChecks) {
+    scopeChecks.style.display = previousMode === 'all' ? 'none' : 'grid';
+    scopeChecks.innerHTML = stations.map((station, index) => `
+      <label><input type="checkbox" class="floater-scope-check" value="${index}" ${index < 2 ? 'checked' : ''}> ${station.name}</label>
+    `).join('');
+  }
+
+  const status = document.getElementById('workerStatus');
+  if (status) {
+    status.innerHTML = stations.map((station, index) => {
+      const assigned = getAssignedFloaterCount(index);
+      return `<div class="worker-status-card"><div>${station.name}</div><div class="small">Fixed workers: ${station.workers}/${station.maxWorkers}</div><div class="small">Floaters assigned here: ${assigned}</div></div>`;
+    }).join('') + (floaterWorkers.length ? `<div class="worker-status-card"><div>Floater Pool</div><div class="small">Total floaters: ${floaterWorkers.length}</div><div class="small">${floaterWorkers.map(f => `#${f.id}: Home ${stations[f.homeStation]?.name || '—'} → Now ${Number.isInteger(f.assignedStation) ? stations[f.assignedStation].name : 'idle'} (${getFloaterScopeLabel(f)})`).join('<br>')}</div></div>` : `<div class="worker-status-card"><div>Floater Pool</div><div class="small">No floaters trained yet.</div></div>`);
+  }
+}
+
+function applyWorkerMove() {
+  const from = parseInt(document.getElementById('moveFromStation')?.value, 10);
+  const to = parseInt(document.getElementById('moveToStation')?.value, 10);
+  if (!Number.isInteger(from) || !Number.isInteger(to) || !stations[from] || !stations[to]) return;
+  if (from === to) {
+    setWorkerFeedback('Choose two different stations.', 'warning');
+    return;
+  }
+  if (stations[from].workers <= 0) {
+    setWorkerFeedback(`${stations[from].name} has no fixed worker available to move.`, 'warning');
+    return;
+  }
+  if (stations[to].workers >= stations[to].maxWorkers) {
+    setWorkerFeedback(`${stations[to].name} has no open fixed worker slot. Add capacity first or move a worker elsewhere.`, 'warning');
+    return;
+  }
+  if (money < WORKER_REALLOCATION_FEE) {
+    setWorkerFeedback(`Not enough money to reallocate. Available: $${Math.round(money).toLocaleString()} | Need: $${WORKER_REALLOCATION_FEE.toLocaleString()}.`, 'warning');
+    return;
+  }
+  money -= WORKER_REALLOCATION_FEE;
+  totalWorkerReallocationSpend += WORKER_REALLOCATION_FEE;
+  stations[from].workers--;
+  stations[to].workers++;
+  autoAssignFloaters();
+  updateUI();
+  renderWorkerMenu();
+  setWorkerFeedback(`Moved one worker from ${stations[from].name} to ${stations[to].name}. Cross-training/reassignment fee: $${WORKER_REALLOCATION_FEE}.`, 'good');
+}
+
+function getSelectedFloaterScope() {
+  const mode = document.getElementById('floaterScopeMode')?.value || 'selected';
+  if (mode === 'all') return stations.map((_, index) => index);
+  return Array.from(document.querySelectorAll('.floater-scope-check:checked')).map(input => parseInt(input.value, 10)).filter(Number.isInteger);
+}
+
+function createFloaterWorker() {
+  const source = parseInt(document.getElementById('floaterSourceStation')?.value, 10);
+  const mode = document.getElementById('floaterScopeMode')?.value || 'selected';
+  let scope = getSelectedFloaterScope();
+  if (!Number.isInteger(source) || !stations[source]) return;
+  scope = Array.from(new Set([...scope, source])).filter(index => Number.isInteger(index) && stations[index]);
+  if (stations[source].workers <= 0) {
+    setWorkerFeedback(`${stations[source].name} has no fixed worker available to train as a floater.`, 'warning');
+    return;
+  }
+  if (mode !== 'all' && scope.length < 2) {
+    setWorkerFeedback('Selected-station floaters need at least two stations in their scope, including the home station.', 'warning');
+    return;
+  }
+  const fee = mode === 'all' ? FLOATER_ALL_STATIONS_FEE : FLOATER_SELECTED_STATIONS_FEE;
+  if (money < fee) {
+    setWorkerFeedback(`Not enough money to train a floater. Available: $${Math.round(money).toLocaleString()} | Need: $${fee.toLocaleString()}.`, 'warning');
+    return;
+  }
+  money -= fee;
+  totalFloaterTrainingSpend += fee;
+  stations[source].workers--;
+  floaterWorkers.push({ id: nextFloaterId++, homeStation: source, scope, allStations: mode === 'all', assignedStation: source, lastAssignedStation: source });
+  autoAssignFloaters();
+  updateUI();
+  renderWorkerMenu();
+  setWorkerFeedback(`Created floater #${nextFloaterId - 1}. Home: ${stations[source].name}. Scope: ${mode === 'all' ? 'all stations' : scope.map(i => stations[i].name).join(' / ')}. Training fee: $${fee.toLocaleString()}.`, 'good');
+}
+
+
+function setUpgradeFeedback(message, type = '') {
+  const feedback = document.getElementById('upgradeFeedback');
+  if (!feedback) return;
+  feedback.className = `upgrade-feedback ${type}`.trim();
+  feedback.textContent = message;
+}
+
+function selectUpgradeStation(index) {
+  selectedUpgradeStationIndex = index;
+  renderUpgradeMenu();
+}
+
+function getUpgradeOptions(index) {
+  const station = stations[index];
+  const isLastStation = index >= stations.length - 1;
+  const effectiveCycleTime = getEffectiveCycleTime(station);
+  const kaizenNext = Math.max(MIN_STATION_CYCLE_TIME_SECONDS, +(station.baseTime * 0.9).toFixed(1));
+  const nextVariationFactor = Math.max(0.25, +(station.variationFactor - 0.25).toFixed(2));
+  const nextTransportTime = isLastStation ? null : Math.max(MIN_TRANSPORT_TIME_SECONDS, +(transportTimes[index] - 0.5).toFixed(1));
+
+  return [
+    {
+      key: 'capacity',
+      title: 'Add Capacity Slot',
+      description: 'Allows this workcell to use one more worker. This increases possible throughput, but labor still costs money.',
+      effect: `Max workers ${station.maxWorkers} → ${station.maxWorkers + 1}`,
+      cost: station.upgradeCost,
+      disabled: false,
+      disabledReason: ''
+    },
+    {
+      key: 'kaizen',
+      title: 'Kaizen: Reduce Cycle Time',
+      description: 'Improves the method at this station. Best used on the current bottleneck when its pace is slower than takt.',
+      effect: `CT ${station.baseTime}s → ${kaizenNext}s; effective pace ${formatEffectiveCycleTime(effectiveCycleTime)}`,
+      cost: station.kaizenCost,
+      disabled: station.baseTime <= MIN_STATION_CYCLE_TIME_SECONDS,
+      disabledReason: 'Cycle time is already at the minimum.'
+    },
+    {
+      key: 'standardWork',
+      title: 'Standard Work: Reduce Variation',
+      description: 'Tightens the station process so random cycle-time variation has less impact on flow and lead time.',
+      effect: `Variation impact ${Math.round(station.variationFactor * 100)}% → ${Math.round(nextVariationFactor * 100)}%`,
+      cost: station.standardWorkCost,
+      disabled: station.variationFactor <= 0.25,
+      disabledReason: 'Variation is already tightly controlled.'
+    },
+    {
+      key: 'layout',
+      title: '5S / Layout: Reduce Travel',
+      description: 'Improves the path to the next station. This reduces transport delay and in-transit WIP.',
+      effect: isLastStation ? 'No downstream travel after final station.' : `Travel ${formatTravelTime(transportTimes[index])} → ${formatTravelTime(nextTransportTime)}`,
+      cost: station.layoutCost,
+      disabled: isLastStation || transportTimes[index] <= MIN_TRANSPORT_TIME_SECONDS,
+      disabledReason: isLastStation ? 'Packing is the final station.' : 'Travel time is already at the minimum.'
+    }
+  ];
+}
+
+function renderUpgradeMenu() {
+  ensureUpgradeState();
+  const station = stations[selectedUpgradeStationIndex];
+  const bottleneckIndex = getCurrentBottleneckIndex();
+  const tabs = document.getElementById('upgradeStationTabs');
+  const context = document.getElementById('upgradeContext');
+  const cards = document.getElementById('upgradeCards');
+  const upgradeMoney = document.getElementById('upgradeMoney');
+  if (!tabs || !context || !cards) return;
+  if (upgradeMoney) upgradeMoney.textContent = Math.round(money).toLocaleString();
+
+  tabs.innerHTML = stations.map((s, idx) => `
+    <button type="button" class="station-tab ${idx === selectedUpgradeStationIndex ? 'selected' : ''}" onclick="selectUpgradeStation(${idx})">
+      ${idx === bottleneckIndex ? '🚨 ' : ''}${idx + 1}. ${s.name}
+    </button>
+  `).join('');
+
+  const downstreamTravel = selectedUpgradeStationIndex < stations.length - 1 ? formatTravelTime(transportTimes[selectedUpgradeStationIndex]) : 'N/A';
+  context.innerHTML = `
+    <div class="mini-stat"><div class="mini-label">Station</div><div class="mini-value">${station.name}</div></div>
+    <div class="mini-stat"><div class="mini-label">CT</div><div class="mini-value">${station.baseTime}s</div></div>
+    <div class="mini-stat"><div class="mini-label">Eff Pace</div><div class="mini-value">${formatEffectiveCycleTime(getEffectiveCycleTime(station))}</div></div>
+    <div class="mini-stat"><div class="mini-label">Workers</div><div class="mini-value">${station.workers}/${station.maxWorkers}</div></div>
+    <div class="mini-stat"><div class="mini-label">Travel Out</div><div class="mini-value">${downstreamTravel}</div></div>
+  `;
+
+  cards.innerHTML = getUpgradeOptions(selectedUpgradeStationIndex).map(option => `
+    <button type="button" class="upgrade-card ${option.disabled ? 'disabled' : ''}" onclick="applyUpgrade('${option.key}')">
+      <h3>${option.title}</h3>
+      <p>${option.description}</p>
+      <div class="upgrade-effect">${option.disabled ? option.disabledReason : option.effect}</div>
+      <span class="upgrade-cost">💵 $${Math.round(option.cost)}</span>
+    </button>
+  `).join('');
+
+  if (Number.isInteger(bottleneckIndex)) {
+    setUpgradeFeedback(`${station.name} selected. Tip: improving the current bottleneck usually changes the whole line balance.`, selectedUpgradeStationIndex === bottleneckIndex ? 'warning' : '');
+  } else {
+    setUpgradeFeedback(`${station.name} selected. All stations currently meet takt; upgrades can still improve profit, WIP, lead time, or resilience.`, '');
+  }
+}
+
+function applyUpgrade(type) {
+  ensureUpgradeState();
+  const station = stations[selectedUpgradeStationIndex];
+  const option = getUpgradeOptions(selectedUpgradeStationIndex).find(o => o.key === type);
+  if (!station || !option) return;
+
+  if (option.disabled) {
+    setUpgradeFeedback(option.disabledReason || 'That upgrade is not available for this station.', 'warning');
+    return;
+  }
+  if (money < option.cost) {
+    setUpgradeFeedback(`Not enough money for ${option.title}. Available: $${Math.round(money).toLocaleString()} | Need: $${Math.round(option.cost).toLocaleString()}.`, 'warning');
+    return;
+  }
+
+  money -= option.cost;
+  totalUpgradeSpend += option.cost;
+  let feedbackMessage = '';
+
+  if (type === 'capacity') {
+    station.maxWorkers++;
+    station.upgradeCost = roundToTen(station.upgradeCost * CAPACITY_COST_MULTIPLIER);
+    feedbackMessage = `${station.name}: capacity slot added. Max workers is now ${station.maxWorkers}.`;
+  }
+
+  if (type === 'kaizen') {
+    const oldBase = station.baseTime;
+    station.baseTime = Math.max(MIN_STATION_CYCLE_TIME_SECONDS, +(station.baseTime * 0.9).toFixed(1));
+    station.kaizenLevel++;
+    station.kaizenCost = roundToTen(station.kaizenCost * KAIZEN_COST_MULTIPLIER);
+    feedbackMessage = `${station.name}: kaizen reduced cycle time from ${oldBase}s to ${station.baseTime}s.`;
+  }
+
+  if (type === 'standardWork') {
+    const oldFactor = station.variationFactor;
+    station.variationFactor = Math.max(0.25, +(station.variationFactor - 0.25).toFixed(2));
+    station.standardWorkLevel++;
+    station.standardWorkCost = roundToTen(station.standardWorkCost * STANDARD_WORK_COST_MULTIPLIER);
+    feedbackMessage = `${station.name}: standard work reduced variation impact from ${Math.round(oldFactor * 100)}% to ${Math.round(station.variationFactor * 100)}%.`;
+  }
+
+  if (type === 'layout') {
+    const oldTravel = transportTimes[selectedUpgradeStationIndex];
+    transportTimes[selectedUpgradeStationIndex] = Math.max(MIN_TRANSPORT_TIME_SECONDS, +(oldTravel - 0.5).toFixed(1));
+    station.layoutLevel++;
+    station.layoutCost = roundToTen(station.layoutCost * LAYOUT_COST_MULTIPLIER);
+    feedbackMessage = `${station.name}: layout/5S reduced outgoing travel from ${formatTravelTime(oldTravel)} to ${formatTravelTime(transportTimes[selectedUpgradeStationIndex])}.`;
+  }
+
+  updateUI();
+  renderUpgradeMenu();
+  setUpgradeFeedback(feedbackMessage || `${station.name}: upgrade applied.`, 'good');
+}
+
+function addWorker(index) {
+  const cost = stations[index].workerCost;
+  if (money >= cost && stations[index].workers < stations[index].maxWorkers) {
+    money -= cost;
+    totalWorkerHireSpend += cost;
+    stations[index].workers++;
+    updateUI();
+  }
+}
+
+function removeWorker(index) {
+  if (stations[index].workers > 0) {
+    stations[index].workers--;
+    updateUI();
+  }
+}
+
+function upgradeStation(index) {
+  selectedUpgradeStationIndex = index;
+  applyUpgrade('capacity');
+}
+
+function togglePlay() {
+  if (variability === 0) {
+    const slider = document.getElementById('variabilitySlider');
+    variability = parseFloat(slider.value);
+    slider.disabled = true;
+  }
+  if (taktTimeGoal === 0 || customerDemandUnits === 0) {
+    initializeDemandScenario();
+  }
+  if (isRoundUnstarted()) {
+    applyEconomyForCurrentDifficulty(true);
+    captureInitialBottleneckPace();
+  }
+  playing = !playing;
+  const btn = document.getElementById("togglePlayBtn");
+  if (playing) {
+    btn.innerText = "⏸️ Pause";
+    if (nextArrival <= time) scheduleNextArrival();
+    resumeActiveTransports();
+    clearInterval(timerInterval);
+    timerInterval = setInterval(advanceTime, speed);
+  } else {
+    btn.innerText = "▶️ Play";
+    clearInterval(timerInterval);
+    pauseActiveTransports();
+  }
+}
+
+function toggleSpeed() {
+  speed = (speed === 1000) ? 333 : 1000;
+  document.getElementById("speedBtn").innerText = speed === 1000 ? "⏩ Speed: 1x" : "⏩ Speed: 3x";
+  if (playing) {
+    clearInterval(timerInterval);
+    timerInterval = setInterval(advanceTime, speed);
+  }
+}
+
+function advanceTime() {
+  const laborCostThisSecond = +(laborCostPerMinute() / 60).toFixed(2);
+  money -= laborCostThisSecond;
+  totalLaborSpend += laborCostThisSecond;
+  time++;
+  updateRandomEvents();
+  autoAssignFloaters();
+
+  if (time >= nextArrival) {
+    if (supplyOn && !isMaterialShortageActive()) {
+      stations[0].queue.push(createPartForStation(0));
+    }
+    scheduleNextArrival();
+  }
+
+  for (let i = 0; i < stations.length; i++) {
+    const station = stations[i];
+
+    for (let j = station.processing.length - 1; j >= 0; j--) {
+      const currentPart = station.processing[j];
+      const workRate = getProcessingWorkRate(i, j);
+      if (currentPart.remaining > 0 && workRate > 0) {
+        currentPart.remaining -= workRate;
+      }
+
+      if (currentPart.remaining <= 0) {
+        currentPart.remaining = 0;
+        if (i < stations.length - 1 && !canReleaseToNextStation(i)) {
+          currentPart.blocked = true;
+          continue;
+        }
+        currentPart.blocked = false;
+        const finishedPart = station.processing.splice(j, 1)[0];
+        if (i === stations.length - 1) {
+          completionTimestamps.push(time);
+          if (completionTimestamps.length > 10) completionTimestamps.shift();
+          if (completionTimestamps.length >= 2) {
+            let intervals = [];
+            for (let k = 1; k < completionTimestamps.length; k++) {
+              intervals.push(completionTimestamps[k] - completionTimestamps[k - 1]);
+            }
+            const sum = intervals.reduce((a, b) => a + b, 0);
+            actualOutputPace = +(sum / intervals.length).toFixed(1);
+            outputPaceHistory.push(actualOutputPace);
+            if (outputPaceHistory.length > 60) outputPaceHistory.shift();
+          }
+          const leadTime = finishedPart && typeof finishedPart.arrivalTime === 'number' ? Math.max(0, time - finishedPart.arrivalTime) : 0;
+          if (leadTime > 0) {
+            completedLeadTimes.push(leadTime);
+            if (completedLeadTimes.length > 20) completedLeadTimes.shift();
+          }
+          lastProductTime = time;
+          money += REVENUE_PER_UNIT;
+          totalRevenueEarned += REVENUE_PER_UNIT;
+          totalProduced++;
+        } else {
+          const factoryChildren = document.getElementById('factory').children;
+          const transports = document.getElementById('transports');
+          const icon = document.createElement('div');
+          icon.className = 'transit-crate';
+
+          const baseTransportTime = (transportTimes[i] || BASE_TRANSPORT_TIME_SECONDS) * getTransportEventMultiplier(i);
+          const transportVariation = ((Math.random() - 0.5) * 2 * variability * 0.5);
+          const transportSeconds = Math.max(MIN_TRANSPORT_TIME_SECONDS, +(baseTransportTime + transportVariation).toFixed(2));
+          const delay = Math.max(1, Math.round(transportSeconds * speed));
+          const sessionId = gameSessionId;
+          const transportId = `${sessionId}-${time}-${i}-${Math.random()}`;
+          const from = factoryChildren[i].getBoundingClientRect();
+          const to = factoryChildren[i + 1].getBoundingClientRect();
+          const containerRect = transports.getBoundingClientRect();
+
+          const startX = from.right - containerRect.left - 8;
+          const conveyorPathY = 152; // Align moving crates with the visible conveyor / travel lane.
+          const startY = from.top + conveyorPathY - containerRect.top;
+          const endX = to.left - containerRect.left + 8;
+          const endY = to.top + conveyorPathY - containerRect.top;
+
+          const transport = {
+            id: transportId,
+            part: finishedPart,
+            fromStation: i,
+            toStation: i + 1,
+            startedAt: time,
+            transportSeconds,
+            sessionId,
+            icon,
+            startX,
+            startY,
+            endX,
+            endY,
+            remainingMs: delay,
+            startedRealMs: Date.now(),
+            timeoutId: null,
+            paused: false
+          };
+          activeTransports.push(transport);
+          icon.style.transition = `transform ${delay}ms linear`;
+          icon.style.left = `${startX}px`;
+          icon.style.top = `${startY}px`;
+          transports.appendChild(icon);
+
+          requestAnimationFrame(() => {
+            icon.style.transform = `translate(${endX - startX}px, ${endY - startY}px)`;
+          });
+
+          scheduleTransportCompletion(transport, delay);
+        }
+      }
+    }
+
+    const capacity = getStationProcessingCapacity(i);
+    while (station.processing.length < capacity && station.queue.length > 0) {
+      station.processing.push(station.queue.shift());
+    }
+  }
+
+  // Overstock penalty is a gameplay rule, not a Lean takt formula.
+  // It now has a grace period so the player gets a warning before money drains.
+  let totalPenalty = 0;
+  let penaltyMessages = [];
+  let totalExcessWip = 0;
+
+  stations.forEach(station => {
+    const overstock = station.queue.length - WIP_FREE_QUEUE_UNITS;
+    if (overstock > 0) {
+      totalExcessWip += overstock;
+      const stationPenalty = overstock * OVERSTOCK_PENALTY_PER_EXCESS_UNIT;
+      totalPenalty += stationPenalty;
+      penaltyMessages.push(`${station.name}: ${overstock} excess units = $${stationPenalty}`);
+    }
+  });
+
+  const penaltyNotice = document.getElementById('penaltyNotice');
+  if (totalExcessWip > 0) {
+    overstockSeconds++;
+    if (overstockSeconds > OVERSTOCK_GRACE_SECONDS) {
+      money -= totalPenalty;
+      totalOverstockPenaltyPaid += totalPenalty;
+      penaltyNotice.innerHTML = `<strong>High WIP Carrying Cost: -$${totalPenalty}</strong><br>${penaltyMessages.join('<br>')}`;
+    } else {
+      penaltyNotice.innerHTML = `<strong>High WIP Warning</strong><br>${totalExcessWip} excess queue units. Carrying cost starts in ${OVERSTOCK_GRACE_SECONDS - overstockSeconds + 1}s.`;
+    }
+    penaltyNotice.style.display = 'block';
+
+    if (penaltyNotice.timeoutId) clearTimeout(penaltyNotice.timeoutId);
+    penaltyNotice.timeoutId = setTimeout(() => {
+      penaltyNotice.style.display = 'none';
+      penaltyNotice.timeoutId = null;
+    }, 3000);
+  } else {
+    overstockSeconds = 0;
+  }
+
+  if (money < -0.01) {
+    negativeMoneyTime++;
+  } else {
+    negativeMoneyTime = 0;
+  }
+
+  recordWasteMetrics();
+
+  if (negativeMoneyTime >= maxNegativeTime) {
+    gameLost = true;
+    clearInterval(timerInterval);
+    showLoseMessage();
+    updateUI();
+    return;
+  }
+
+  if (!gameWon && !gameLost) {
+    const liveOutputPace = getLiveOutputPace();
+    const winTolerance = getTaktToleranceSeconds();
+    const hasEnoughOutputData = completionTimestamps.length >= MIN_COMPLETIONS_FOR_WIN;
+    const inRange = hasEnoughOutputData && Math.abs(liveOutputPace - taktTimeGoal) <= winTolerance;
+    const recentlyProduced = lastProductTime > 0 && (time - lastProductTime) <= (taktTimeGoal + winTolerance);
+    const notBroke = money >= 0;
+
+    // Win based on what the customer experiences: sustained actual output pace close to takt.
+    // Do not require every station's momentary effective capacity to be under takt because floaters
+    // intentionally move and can make station capacity look temporarily unbalanced while the line output is stable.
+    if (inRange && recentlyProduced && notBroke) winTimer++;
+    else winTimer = 0;
+    if (winTimer >= WIN_STABILITY_SECONDS) {
+      gameWon = true;
+      clearInterval(timerInterval);
+      showWinMessage();
+    }
+  }
+
+  updateUI();
+}
+
+
+function toggleSupply() {
+  supplyOn = !supplyOn;
+  const btn = document.getElementById("toggleSupplyBtn");
+  btn.innerText = supplyOn ? "🛑 Stop Supply" : "✅ Resume Supply";
+}
+
+
+
+function resetGame() {
+  closeUpgradeMenu(false);
+  closeWorkerMenu(false);
+  const slider = document.getElementById('variabilitySlider');
+  winTimer = 0;
+  winStartTime = null;
+  slider.disabled = false;
+  gameWon = false;
+  gameLost = false;
+  variability = parseFloat(slider.value);
+  clearInterval(timerInterval);
+  money = getStartingCashForDifficulty();
+  time = 0;
+  totalProduced = 0;
+  activeTransports.forEach(t => {
+    if (t.timeoutId) clearTimeout(t.timeoutId);
+    if (t.icon) t.icon.remove();
+  });
+  activeTransports = [];
+  completedLeadTimes = [];
+  lastProductTime = 0;
+  actualOutputPace = 0;
+  activeRandomEvent = null;
+  nextRandomEventCheck = 0;
+  randomEventsTriggered = 0;
+  overstockSeconds = 0;
+  totalRevenueEarned = 0;
+  totalLaborSpend = 0;
+  totalWorkerHireSpend = 0;
+  totalUpgradeSpend = 0;
+  totalWorkerReallocationSpend = 0;
+  totalFloaterTrainingSpend = 0;
+  totalOverstockPenaltyPaid = 0;
+  totalWorkerCapacitySeconds = 0;
+  totalIdleWorkerSeconds = 0;
+  totalPaceTrackingSeconds = 0;
+  overproductionSeconds = 0;
+  initialBottleneckPace = 0;
+  negativeMoneyTime = 0;
+  playing = false;
+  supplyOn = true;
+  gameSessionId++;
+  document.querySelectorAll('.win-message').forEach(m => m.remove());
+  document.getElementById('transports').innerHTML = '';
+  document.getElementById("togglePlayBtn").innerText = "▶️ Play";
+  document.getElementById("toggleSupplyBtn").innerText = "🛑 Stop Supply";
+  document.getElementById("speedBtn").innerText = "⏩ Speed: 1x";
+  speed = 1000;
+  transportTimes = Array.from({ length: stations.length - 1 }, () => BASE_TRANSPORT_TIME_SECONDS);
+  kanbanLimits = Array.from({ length: stations.length - 1 }, () => DEFAULT_KANBAN_LIMIT);
+  selectedUpgradeStationIndex = 0;
+  floaterWorkers = [];
+  nextFloaterId = 1;
+  stations.forEach(station => {
+    station.workerCost = getStationWorkerHireCost(station.name);
+    station.baseTime = randCycle();
+    station.workers = 1;
+    station.queue = [];
+    station.processing = [];
+    station.productivity = 1.0;
+    station.maxWorkers = station.name === 'Assembly' ? 4 : (station.name === 'Painting' ? 2 : 3);
+    resetUpgradeStateForStation(station);
+  });
+  initializeDemandScenario();
+  captureInitialBottleneckPace();
+  outputPaceHistory = [];
+  completionTimestamps = [];
+  nextArrival = 0;
+  updateUI();
+}
+
+
+function clampScore(value, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function calculateScoreBreakdown(isWin = false) {
+  const livePace = getLiveOutputPace();
+  const hasPace = livePace > 0 && taktTimeGoal > 0;
+  const paceError = hasPace ? Math.abs(livePace - taktTimeGoal) : taktTimeGoal * 3;
+  const scoreTolerance = getTaktToleranceSeconds();
+  const taktAlignment = clampScore(30 * (1 - paceError / (scoreTolerance * 3)), 0, 30);
+
+  const startingCash = getStartingCashForDifficulty();
+  const profitTarget = startingCash + 500;
+  const profit = clampScore(15 * ((money + 250) / (profitTarget + 250)), 0, 15);
+
+  const idealWip = stations.length + Math.ceil(customerDemandUnits * 0.8);
+  const excessWip = Math.max(0, getTotalWip() - idealWip);
+  const wipControl = clampScore(15 * (1 - excessWip / Math.max(8, idealWip + 4)), 0, 15);
+
+  const avgLead = getAverageLeadTime();
+  const targetLead = (taktTimeGoal || 12) * stations.length + transportTimes.reduce((a, b) => a + b, 0);
+  const leadTimeScore = avgLead <= 0
+    ? 0
+    : clampScore(15 * (1 - Math.max(0, avgLead - targetLead * 1.15) / Math.max(10, targetLead * 1.5)), 0, 15);
+
+  const idleRate = getIdleWorkerRate();
+  const utilizationDiscipline = clampScore(10 * (1 - idleRate / 0.35), 0, 10);
+
+  const overproductionRate = getOverproductionRate();
+  let overproductionControl = clampScore(10 * (1 - overproductionRate / 0.40), 0, 10);
+  if (hasPace && livePace < Math.max(0, taktTimeGoal - scoreTolerance)) {
+    const fastBy = taktTimeGoal - livePace;
+    const extraPenalty = clampScore((fastBy / Math.max(1, taktTimeGoal)) * 10, 0, 4);
+    overproductionControl = clampScore(overproductionControl - extraPenalty, 0, 10);
+  }
+
+  let randomEventRecovery = 5;
+  if (isMaxDifficulty()) {
+    if (randomEventsTriggered === 0) randomEventRecovery = 3;
+    else randomEventRecovery = isWin ? 5 : (activeRandomEvent ? 2 : 4);
+  }
+
+  const total = Math.round(taktAlignment + profit + wipControl + leadTimeScore + utilizationDiscipline + overproductionControl + randomEventRecovery);
+  return {
+    total: clampScore(total, 0, 100),
+    taktAlignment: Math.round(taktAlignment),
+    profit: Math.round(profit),
+    wipControl: Math.round(wipControl),
+    leadTime: Math.round(leadTimeScore),
+    utilizationDiscipline: Math.round(utilizationDiscipline),
+    overproductionControl: Math.round(overproductionControl),
+    randomEventRecovery: Math.round(randomEventRecovery),
+    idleRate,
+    overproductionRate
+  };
+}
+
+function renderScoreBreakdown(isWin = false) {
+  const score = calculateScoreBreakdown(isWin);
+  return `
+    <div class="score-summary">
+      <div class="score-total"><span>Final Score</span><strong>${score.total}/100</strong></div>
+      <div class="score-row"><span>Takt Alignment</span><span>${score.taktAlignment}/30</span></div>
+      <div class="score-row"><span>Profit</span><span>${score.profit}/15</span></div>
+      <div class="score-row"><span>WIP Control</span><span>${score.wipControl}/15</span></div>
+      <div class="score-row"><span>Lead Time</span><span>${score.leadTime}/15</span></div>
+      <div class="score-row"><span>Utilization Discipline</span><span>${score.utilizationDiscipline}/10</span></div>
+      <div class="score-row"><span>Overproduction Control</span><span>${score.overproductionControl}/10</span></div>
+      <div class="score-row"><span>Random Event Recovery</span><span>${score.randomEventRecovery}/5</span></div>
+    </div>
+    <div class="economy-summary">
+      <div>Difficulty: <strong>${formatDifficulty(getCurrentDifficulty())}</strong></div>
+      <div>Starting Cash: <strong>$${getStartingCashForDifficulty().toLocaleString()}</strong></div>
+      <div>Revenue Earned: <strong>$${Math.round(totalRevenueEarned).toLocaleString()}</strong></div>
+      <div>Labor Spend: <strong>$${Math.round(totalLaborSpend).toLocaleString()}</strong></div>
+      <div>Idle Worker Time: <strong>${Math.round(totalIdleWorkerSeconds)} worker-sec (${Math.round(getIdleWorkerRate() * 100)}%)</strong></div>
+      <div>Overproduction Time: <strong>${Math.round(overproductionSeconds)}s (${Math.round(getOverproductionRate() * 100)}%)</strong></div>
+      <div>Worker Hire Spend: <strong>$${Math.round(totalWorkerHireSpend).toLocaleString()}</strong></div>
+      <div>Reallocation Spend: <strong>$${Math.round(totalWorkerReallocationSpend).toLocaleString()}</strong></div>
+      <div>Floater Training Spend: <strong>$${Math.round(totalFloaterTrainingSpend).toLocaleString()}</strong></div>
+      <div>Active Floaters: <strong>${floaterWorkers.length}</strong></div>
+      <div>Upgrade Spend: <strong>$${Math.round(totalUpgradeSpend).toLocaleString()}</strong></div>
+      <div>WIP Penalties: <strong>$${Math.round(totalOverstockPenaltyPaid).toLocaleString()}</strong></div>
+      <div>Final Cash: <strong>$${Math.round(money).toLocaleString()}</strong></div>
+    </div>
+  `;
+}
+
+function showWinMessage() {
+  const message = document.createElement('div');
+  message.className = 'win-message';
+  message.innerHTML = `
+    <div>
+      <h2>🎉 CONGRATULATIONS!!! 🎉</h2>
+      <p style="font-size: 0.6rem; margin-top: -1rem; margin-bottom: 1rem;">
+        You held actual output pace within +/- ${getTaktToleranceSeconds()} seconds of the takt requirement while staying solvent.
+      </p>
+      <p>You maintained takt alignment for 60s without going broke!</p>
+      <p>Demand Rate: ${customerDemandUnits} units/min</p>
+      <p>Takt Requirement: ${AVAILABLE_PRODUCTION_TIME_SECONDS}s available / ${customerDemandUnits} units = ${formatPace(taktTimeGoal)}</p>
+      <p>Final Actual Output Pace: ${formatPace(getLiveOutputPace())} (${getPaceVsTaktText()})</p>
+      <p>Final WIP: ${getTotalWip()} units</p>
+      <p>Final Transit Buffer Limits: ${kanbanLimits.join(" / ")}</p>
+      <p>Active Floaters: ${floaterWorkers.length}</p>
+      <p>Random Events Triggered: ${randomEventsTriggered}</p>
+      <p>Average Lead Time: ${formatLeadTime(getAverageLeadTime())}</p>
+      <p>Total Produced: ${totalProduced} units</p>
+      <p>Total Time: ${Math.floor(time / 60)}m ${time % 60}s</p>
+      <p>Final Money: $${Math.round(money)}</p>
+      ${renderScoreBreakdown(true)}
+      <button onclick="dismissWinMessage(this)">🔁 Play Again</button>
+    </div>
+  `;
+  document.body.appendChild(message);
+}
+
+function showLoseMessage() {
+  const message = document.createElement('div');
+  message.className = 'win-message';
+  message.innerHTML = `
+    <div>
+      <h2 style="color: red;">💀 GAME OVER 💀</h2>
+      <p style="font-size: 0.6rem; margin-top: -1rem; margin-bottom: 1rem;">
+        You stayed in debt for more than 2 minutes.
+      </p>
+      <p>Demand Rate: ${customerDemandUnits} units/min</p>
+      <p>Takt Requirement: ${AVAILABLE_PRODUCTION_TIME_SECONDS}s available / ${customerDemandUnits} units = ${formatPace(taktTimeGoal)}</p>
+      <p>Actual Output Pace: ${formatPace(getLiveOutputPace())} (${getPaceVsTaktText()})</p>
+      <p>Final WIP: ${getTotalWip()} units</p>
+      <p>Final Transit Buffer Limits: ${kanbanLimits.join(" / ")}</p>
+      <p>Active Floaters: ${floaterWorkers.length}</p>
+      <p>Random Events Triggered: ${randomEventsTriggered}</p>
+      <p>Average Lead Time: ${formatLeadTime(getAverageLeadTime())}</p>
+      <p>Total Produced: ${totalProduced} units</p>
+      <p>Total Time: ${Math.floor(time / 60)}m ${time % 60}s</p>
+      <p>Final Money: $${Math.round(money)}</p>
+      ${renderScoreBreakdown(false)}
+      <button onclick="dismissWinMessage(this)">🔁 Try Again</button>
+    </div>
+  `;
+  document.body.appendChild(message);
+}
+
+
+function dismissWinMessage(button) {
+  const message = button.closest('.win-message');
+  if (message) message.remove();
+  resetGame();
+}
+
+function toggleProductivity(index) {
+  const levels = [0.25, 0.5, 0.75, 1.0];
+  const current = stations[index].productivity;
+  const nextIndex = (levels.indexOf(current) + 1) % levels.length;
+  stations[index].productivity = levels[nextIndex];
+  updateUI();
+}
+
+
+// --- Soft synthesized UI sounds ---
+// Uses Web Audio so the game stays single-file and avoids harsh external click effects.
+let taktAudioContext = null;
+const UI_SOUND_VOLUME = 0.26;
+
+function getTaktAudioContext() {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) return null;
+  if (!taktAudioContext) taktAudioContext = new AudioContextCtor();
+  if (taktAudioContext.state === 'suspended') {
+    taktAudioContext.resume().catch(() => {});
+  }
+  return taktAudioContext;
+}
+
+function createGainEnvelope(ctx, startTime, peak, attack, decay, sustain, release, duration) {
+  const gain = ctx.createGain();
+  const endTime = startTime + duration;
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), startTime + attack);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, sustain), startTime + attack + decay);
+  gain.gain.setValueAtTime(Math.max(0.0001, sustain), Math.max(startTime + attack + decay, endTime - release));
+  gain.gain.exponentialRampToValueAtTime(0.0001, endTime);
+  return gain;
+}
+
+function playTone(ctx, { frequency = 440, type = 'sine', start = 0, duration = 0.16, peak = 0.08, sustain = 0.012, attack = 0.01, decay = 0.06, release = 0.08, destination = null, detune = 0 }) {
+  const now = ctx.currentTime + start;
+  const osc = ctx.createOscillator();
+  const gain = createGainEnvelope(ctx, now, peak * UI_SOUND_VOLUME, attack, decay, sustain * UI_SOUND_VOLUME, release, duration);
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, now);
+  if (detune) osc.detune.setValueAtTime(detune, now);
+  osc.connect(gain);
+  gain.connect(destination || ctx.destination);
+  osc.start(now);
+  osc.stop(now + duration + 0.03);
+}
+
+function playSoftNoise(ctx, { start = 0, duration = 0.07, peak = 0.035, cutoff = 950 }) {
+  const now = ctx.currentTime + start;
+  const sampleRate = ctx.sampleRate;
+  const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(sampleRate * duration)), sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2.2);
+  }
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(cutoff, now);
+  const gain = createGainEnvelope(ctx, now, peak * UI_SOUND_VOLUME, 0.004, 0.02, 0.001, 0.04, duration);
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  source.start(now);
+  source.stop(now + duration + 0.02);
+}
+
+function playCreamyStationPress() {
+  const ctx = getTaktAudioContext();
+  if (!ctx) return;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(1200, ctx.currentTime);
+  filter.frequency.exponentialRampToValueAtTime(760, ctx.currentTime + 0.18);
+  filter.connect(ctx.destination);
+  playTone(ctx, { frequency: 164.8, type: 'sine', duration: 0.20, peak: 0.18, sustain: 0.016, attack: 0.006, decay: 0.05, release: 0.12, destination: filter });
+  playTone(ctx, { frequency: 246.9, type: 'triangle', duration: 0.18, peak: 0.11, sustain: 0.010, attack: 0.008, decay: 0.05, release: 0.10, destination: filter, detune: -4 });
+  playTone(ctx, { frequency: 329.6, type: 'sine', start: 0.018, duration: 0.16, peak: 0.07, sustain: 0.006, attack: 0.008, decay: 0.04, release: 0.09, destination: filter });
+  playSoftNoise(ctx, { duration: 0.055, peak: 0.022, cutoff: 700 });
+}
+
+function playPleasantUiPress() {
+  const ctx = getTaktAudioContext();
+  if (!ctx) return;
+  playTone(ctx, { frequency: 523.25, type: 'sine', duration: 0.10, peak: 0.075, sustain: 0.006, attack: 0.006, decay: 0.03, release: 0.055 });
+  playTone(ctx, { frequency: 659.25, type: 'sine', start: 0.028, duration: 0.12, peak: 0.055, sustain: 0.005, attack: 0.006, decay: 0.035, release: 0.065 });
+  playTone(ctx, { frequency: 783.99, type: 'triangle', start: 0.055, duration: 0.13, peak: 0.040, sustain: 0.004, attack: 0.006, decay: 0.04, release: 0.075 });
+}
+
+function playUpgradePress() {
+  const ctx = getTaktAudioContext();
+  if (!ctx) return;
+  playTone(ctx, { frequency: 392.00, type: 'sine', duration: 0.12, peak: 0.070, sustain: 0.006, attack: 0.006, decay: 0.035, release: 0.065 });
+  playTone(ctx, { frequency: 587.33, type: 'triangle', start: 0.045, duration: 0.15, peak: 0.060, sustain: 0.005, attack: 0.006, decay: 0.04, release: 0.08 });
+  playTone(ctx, { frequency: 783.99, type: 'sine', start: 0.090, duration: 0.18, peak: 0.040, sustain: 0.004, attack: 0.008, decay: 0.05, release: 0.10 });
+}
+
+function playButtonFeedback(button) {
+  if (!button || button.disabled) return;
+  if (button.classList.contains('station-btn') || button.classList.contains('station-tab')) {
+    playCreamyStationPress();
+    return;
+  }
+  if (button.classList.contains('upgrade-card')) {
+    playUpgradePress();
+    return;
+  }
+  playPleasantUiPress();
+}
+
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  playButtonFeedback(button);
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+  ensureUpgradeState();
+  applyEconomyForCurrentDifficulty(true);
+  captureInitialBottleneckPace();
+  updateUI();
+});
+
+const slider = document.getElementById("variabilitySlider");
+const tooltip = document.getElementById("tooltip");
+const variabilityValue = document.getElementById("variabilityValue");
+
+// Set tooltip content and styling once
+tooltip.innerText = "Higher difficulty increases process variation, tightens starting cash/costs, and enables random events only at MAX. The slider is disabled after START is pressed.";
+tooltip.style.fontSize = "0.55rem";
+tooltip.style.maxWidth = "250px";
+tooltip.style.textAlign = "center";
+tooltip.style.pointerEvents = "none";
+
+function updateDifficultyTooltipPosition() {
+  if (!slider || !tooltip) return;
+  const min = parseFloat(slider.min);
+  const max = parseFloat(slider.max);
+  const value = parseFloat(slider.value);
+  const percent = (value - min) / (max - min || 1);
+  const thumbX = slider.offsetLeft + (slider.offsetWidth * percent);
+  const parentWidth = slider.parentElement ? slider.parentElement.clientWidth : 0;
+  const halfTooltip = Math.min(135, parentWidth / 2);
+  const safeLeft = Math.max(halfTooltip, Math.min(parentWidth - halfTooltip, thumbX));
+  tooltip.style.left = `${safeLeft}px`;
+}
+
+// Show tooltip on hover/focus and keep it anchored over the slider thumb.
+slider.addEventListener("mouseenter", function () {
+  if (!slider.disabled) {
+    updateDifficultyTooltipPosition();
+    tooltip.style.visibility = "visible";
+  }
+});
+
+slider.addEventListener("mousemove", updateDifficultyTooltipPosition);
+slider.addEventListener("focus", function () {
+  if (!slider.disabled) {
+    updateDifficultyTooltipPosition();
+    tooltip.style.visibility = "visible";
+  }
+});
+
+slider.addEventListener("mouseleave", function () {
+  tooltip.style.visibility = "hidden";
+});
+slider.addEventListener("blur", function () {
+  tooltip.style.visibility = "hidden";
+});
+
+function updateDifficultyDisplay() {
+  variabilityValue.innerText = formatDifficulty(parseFloat(slider.value));
+  if (isRoundUnstarted()) {
+    applyEconomyForCurrentDifficulty(true);
+    updateUI();
+  }
+  updateDifficultyTooltipPosition();
+}
+
+// Update value display
+slider.addEventListener("input", function () {
+  updateDifficultyDisplay();
+});
+window.addEventListener("resize", updateDifficultyTooltipPosition);
+updateDifficultyDisplay();
+
+function checkWinCondition() {
+  if (gameWon || gameLost) return;
+  const liveOutputPace = getLiveOutputPace();
+  const winTolerance = getTaktToleranceSeconds();
+  const hasEnoughOutputData = completionTimestamps.length >= MIN_COMPLETIONS_FOR_WIN;
+  const inRange = hasEnoughOutputData && Math.abs(liveOutputPace - taktTimeGoal) <= winTolerance;
+  const stationsCanMeetTakt = allStationsMeetTakt();
+  const notBroke = money >= 0;
+
+  if (inRange && stationsCanMeetTakt && notBroke) {
+    if (!winStartTime) winStartTime = Date.now();
+  } else {
+    winStartTime = null;
+  }
+
+  if (winStartTime && Date.now() - winStartTime >= WIN_STABILITY_SECONDS * 1000) {
+    gameWon = true;
+    clearInterval(timerInterval);
+    showWinMessage();
+  }
+}
+
+// Ctrl + Alt + W
+window.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.altKey && e.key === 'w') {
+    gameWon = true;
+    clearInterval(timerInterval);
+    showWinMessage();
+  }
+});
+
+const rulesBtn = document.getElementById('rulesBtn');
+const rulesTooltip = document.getElementById('rulesTooltip');
+
+rulesBtn.addEventListener('mouseenter', () => {
+  rulesTooltip.style.display = 'block';
+});
+
+rulesBtn.addEventListener('mouseleave', () => {
+  rulesTooltip.style.display = 'none';
+});
+
+const upgradeModal = document.getElementById('upgradeModal');
+if (upgradeModal) {
+  upgradeModal.addEventListener('click', (event) => {
+    if (event.target === upgradeModal) closeUpgradeMenu();
+  });
+}
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') { closeUpgradeMenu(); closeWorkerMenu(); }
+});
+
+
+</script>
+
+<script>
+(function(){
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('keydown', function(e){
+    const k = (e.key || '').toLowerCase();
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['i','j','c'].includes(k)) || (e.ctrlKey && k === 'u')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
