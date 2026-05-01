@@ -1538,7 +1538,7 @@ button[onclick="openWorkerMenu()"] { min-width: 154px; }
           <section class="rules-card">
             <h3>Workers and Flex Availability</h3>
             <ul>
-              <li><strong>Hire</strong> adds a fixed worker at that station, up to the max worker limit.</li>
+              <li><strong>Hire</strong> adds a fixed worker at that station, up to the max worker limit. Each station now starts with only <strong>one worker slot</strong>, so you need an <strong>Add Capacity Slot</strong> upgrade before hiring extra fixed workers.</li>
               <li><strong>Lay Off</strong> removes a fixed worker.</li>
               <li><strong>Flex %</strong> applies only to the <strong>last fixed worker</strong> at that station. Earlier workers stay full-time.</li>
               <li>Example: 3 workers at Flex 50% = 2 full workers + 1 half-time worker = 2.5 effective workers.</li>
@@ -1841,11 +1841,12 @@ function randCycle() {
   return Math.floor(Math.random() * 13 + 8); // 8 to 20 seconds
 }
   
+const STARTING_WORKER_SLOTS_PER_STATION = 1;
 const stations = [
-  { name: 'Cutting', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Cutting'), workers: 1, maxWorkers: 3, upgradeCost: getCapacityUpgradeCost('Cutting'), queue: [], processing: [], productivity: 1.0 },
-  { name: 'Assembly', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Assembly'), workers: 1, maxWorkers: 4, upgradeCost: getCapacityUpgradeCost('Assembly'), queue: [], processing: [], productivity: 1.0 },
-  { name: 'Painting', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Painting'), workers: 1, maxWorkers: 2, upgradeCost: getCapacityUpgradeCost('Painting'), queue: [], processing: [], productivity: 1.0 },
-  { name: 'Packing', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Packing'), workers: 1, maxWorkers: 3, upgradeCost: getCapacityUpgradeCost('Packing'), queue: [], processing: [], productivity: 1.0 }
+  { name: 'Cutting', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Cutting'), workers: 1, maxWorkers: STARTING_WORKER_SLOTS_PER_STATION, upgradeCost: getCapacityUpgradeCost('Cutting'), queue: [], processing: [], productivity: 1.0 },
+  { name: 'Assembly', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Assembly'), workers: 1, maxWorkers: STARTING_WORKER_SLOTS_PER_STATION, upgradeCost: getCapacityUpgradeCost('Assembly'), queue: [], processing: [], productivity: 1.0 },
+  { name: 'Painting', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Painting'), workers: 1, maxWorkers: STARTING_WORKER_SLOTS_PER_STATION, upgradeCost: getCapacityUpgradeCost('Painting'), queue: [], processing: [], productivity: 1.0 },
+  { name: 'Packing', baseTime: randCycle(), workerCost: getStationWorkerHireCost('Packing'), workers: 1, maxWorkers: STARTING_WORKER_SLOTS_PER_STATION, upgradeCost: getCapacityUpgradeCost('Packing'), queue: [], processing: [], productivity: 1.0 }
 ];
 
 
@@ -1903,10 +1904,28 @@ function isRoundUnstarted() {
   return !playing && time === 0 && totalProduced === 0 && getTotalWip() === 0 && activeTransports.length === 0;
 }
 
-function applyEconomyForCurrentDifficulty(resetCash = false) {
+function hasPreRoundPlayerChanges() {
+  return stations.some(station =>
+    station.workers !== 1 ||
+    station.maxWorkers !== STARTING_WORKER_SLOTS_PER_STATION ||
+    station.queue.length > 0 ||
+    station.processing.length > 0 ||
+    Math.abs((station.productivity || 1) - 1) > 0.001 ||
+    (station.kaizenLevel || 0) > 0 ||
+    (station.standardWorkLevel || 0) > 0 ||
+    (station.layoutLevel || 0) > 0
+  ) || floaterWorkers.length > 0 ||
+    totalWorkerHireSpend > 0 || totalUpgradeSpend > 0 || totalWorkerReallocationSpend > 0 || totalFloaterTrainingSpend > 0;
+}
+
+function isRoundPristine() {
+  return isRoundUnstarted() && !hasPreRoundPlayerChanges();
+}
+
+function applyEconomyForCurrentDifficulty(resetCash = false, resetUpgrades = false) {
   stations.forEach(station => {
     station.workerCost = getStationWorkerHireCost(station.name);
-    resetUpgradeStateForStation(station);
+    if (resetUpgrades) resetUpgradeStateForStation(station);
   });
   if (resetCash) money = getStartingCashForDifficulty();
 }
@@ -3247,8 +3266,7 @@ function togglePlay() {
   if (taktTimeGoal === 0 || customerDemandUnits === 0) {
     initializeDemandScenario();
   }
-  if (isRoundUnstarted()) {
-    applyEconomyForCurrentDifficulty(true);
+  if (isRoundUnstarted() && initialBottleneckPace <= 0) {
     captureInitialBottleneckPace();
   }
   playing = !playing;
@@ -3536,7 +3554,7 @@ function resetGame() {
     station.queue = [];
     station.processing = [];
     station.productivity = 1.0;
-    station.maxWorkers = station.name === 'Assembly' ? 4 : (station.name === 'Painting' ? 2 : 3);
+    station.maxWorkers = STARTING_WORKER_SLOTS_PER_STATION;
     resetUpgradeStateForStation(station);
   });
   initializeDemandScenario();
@@ -3818,7 +3836,7 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   ensureUpgradeState();
-  applyEconomyForCurrentDifficulty(true);
+  applyEconomyForCurrentDifficulty(true, true);
   captureInitialBottleneckPace();
   updateUI();
 });
@@ -3872,8 +3890,11 @@ slider.addEventListener("blur", function () {
 
 function updateDifficultyDisplay() {
   variabilityValue.innerText = formatDifficulty(parseFloat(slider.value));
-  if (isRoundUnstarted()) {
-    applyEconomyForCurrentDifficulty(true);
+  if (isRoundPristine()) {
+    applyEconomyForCurrentDifficulty(true, true);
+    updateUI();
+  } else if (isRoundUnstarted()) {
+    applyEconomyForCurrentDifficulty(false, false);
     updateUI();
   }
   updateDifficultyTooltipPosition();
@@ -3892,10 +3913,12 @@ function checkWinCondition() {
   const winTolerance = getTaktToleranceSeconds();
   const hasEnoughOutputData = completionTimestamps.length >= MIN_COMPLETIONS_FOR_WIN;
   const inRange = hasEnoughOutputData && Math.abs(liveOutputPace - taktTimeGoal) <= winTolerance;
-  const stationsCanMeetTakt = allStationsMeetTakt();
   const notBroke = money >= 0;
 
-  if (inRange && stationsCanMeetTakt && notBroke) {
+  // Win by sustaining actual customer-paced output, not by forcing every station
+  // to look perfectly balanced every second. This avoids blocking fair wins when
+  // floaters dynamically move between stations.
+  if (inRange && notBroke) {
     if (!winStartTime) winStartTime = Date.now();
   } else {
     winStartTime = null;
